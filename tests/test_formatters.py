@@ -34,6 +34,24 @@ class FormatterTests(unittest.TestCase):
         self.assertIn("上传者：五香雷奥丶", output)
         self.assertIn("合集：驴鸽直播切片", output)
 
+    def test_bilibili_title_inferred_name_is_disclosed(self):
+        output = render_markdown(
+            {
+                "route": "bilibili_decks",
+                "results": [
+                    {
+                        "deck_name_hint": "猪龙中速猎",
+                        "deck_name_source": "video_title_inferred",
+                        "deck_code": STANDARD_CODE,
+                        "deck_code_valid": True,
+                        "video_url": "https://www.bilibili.com/video/BV189Kb6nEZz/",
+                    }
+                ],
+            }
+        )
+        self.assertIn("###猪龙中速猎", output)
+        self.assertIn("名称依据：视频标题", output)
+
     def test_invalid_ranking_code_is_not_rendered(self):
         output = render_markdown(
             {

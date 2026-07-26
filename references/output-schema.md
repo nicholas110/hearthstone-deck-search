@@ -17,8 +17,8 @@ Each search script returns one JSON object with a route-specific result schema.
 - `uploader`: Bilibili uploader account.
 - `collection_id` and `collection_name`: resolved UGC season.
 - `bvid`, `video_url`, `title`, and `published_at`: video evidence.
-- `deck_name_hint`: deterministic display name from the nearest description heading or label. Player IDs, server/rank prefixes, records, win rates, and match counts may be removed.
-- `deck_name_source`: `description_heading`, `description_label`, `description_inline`, or `description_line`; append `_normalized` when metadata was removed. Otherwise `null`.
+- `deck_name_hint`: deterministic display name from the nearest description heading or label, with a high-confidence title fallback for a single unnamed code. Player IDs, server/rank prefixes, records, win rates, and match counts may be removed.
+- `deck_name_source`: `description_heading`, `description_label`, `description_inline`, `description_line`, or `video_title_inferred`; append `_normalized` to description sources when metadata was removed. Otherwise `null`.
 - `deck_code`: complete extracted deck code.
 - `deck_code_valid`: full Hearthstone Deckstring structural validation.
 - `description_excerpt`: short local evidence around the code.
@@ -39,7 +39,7 @@ AAECAa0GBsugBKiWB/ypB4CqB4SqB4O/BwzwnwSg+wbD/waFhgedrQeFvwebvweixAeyxQevyQew3weW
 
 This is a Markdown fenced code block. Compatible UIs show a copy button in its upper-right corner. A name table must not replace these blocks.
 
-For Bilibili results, copy the script-produced `deck_name_hint` into the `###` line without further rewriting. If no hint exists, use `未命名卡组`; never infer a name from the title or model knowledge. The unmodified source text remains available in `description_excerpt`.
+For Bilibili results, copy the script-produced `deck_name_hint` into the `###` line without further rewriting. If no hint exists, inspect `title` and extract a concise name only when the archetype is clearly stated; disclose that it is title-inferred. Use `未命名卡组` only when both description and title are genuinely ambiguous. Never infer from gameplay frames or card knowledge alone. The unmodified source text remains available in `description_excerpt`.
 
 ## NetEase Dashen route
 

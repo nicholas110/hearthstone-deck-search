@@ -91,6 +91,57 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(deck["deck_name_hint"], "lvge 卡德加法")
         self.assertEqual(deck["deck_name_source"], "description_heading")
 
+    def test_title_fallback_extracts_midrange_hunter(self):
+        deck = module.extract_decks(
+            f"视频每期卡组都会更新\n{STANDARD_CODE}",
+            "【雏雏】8-3无敌猪龙中速猎！还有这种combo？！幼龙连冲两脚斩杀！",
+            "雏雏",
+        )[0]
+        self.assertEqual(deck["deck_name_hint"], "猪龙中速猎")
+        self.assertEqual(deck["deck_name_source"], "video_title_inferred")
+
+    def test_title_fallback_extracts_deck_names_from_real_title_patterns(self):
+        cases = {
+            "【雏雏】雏神天梯偶遇九千羽！2费贼丝血极限翻盘！拿捏！": "2费贼",
+            "【雏雏】玩就上分！5连胜无敌2费贼！雏神顶级思路！": "2费贼",
+            "【雏雏】最新突牙双蛋战！3连胜吊打贼萨！": "突牙双蛋战",
+            "【雏雏】雏神无敌老鸟牧！5费俩10-14魔免吸血嘲讽老鸟！": "老鸟牧",
+        }
+        for title, expected in cases.items():
+            with self.subTest(title=title):
+                deck = module.extract_decks(
+                    f"视频每期卡组都会更新\n{STANDARD_CODE}",
+                    title,
+                    "雏雏",
+                )[0]
+                self.assertEqual(deck["deck_name_hint"], expected)
+                self.assertEqual(deck["deck_name_source"], "video_title_inferred")
+
+    def test_description_name_stays_authoritative_over_title(self):
+        deck = module.extract_decks(
+            f"### lvge 卡德加法\n{STANDARD_CODE}",
+            "标题里写着宇宙法",
+            "驴鸽",
+        )[0]
+        self.assertEqual(deck["deck_name_hint"], "lvge 卡德加法")
+        self.assertEqual(deck["deck_name_source"], "description_heading")
+
+    def test_multiple_codes_do_not_share_one_title_inference(self):
+        second_code = (
+            "AAECAR8Gqp8EpfwGmacHmqcHm6cHrtgHDKmfBNOeBq+SB86bB4PAB7TAB7vAB97E"
+            "B6zYB9faB9PbB9fbBwABA4OEB67YB6aSB67YB7qVB67YBwAA"
+        )
+        decks = module.extract_decks(
+            f"{STANDARD_CODE}\n{second_code}",
+            "【雏雏】突牙双蛋战！",
+            "雏雏",
+        )
+        self.assertEqual(len(decks), 2)
+        self.assertTrue(all(deck["deck_name_hint"] is None for deck in decks))
+
+    def test_title_does_not_treat_narrative_words_as_deck_names(self):
+        self.assertIsNone(module.infer_name_from_title("这个玩法太离谱了！吊打贼萨！"))
+
     def test_metadata_line_does_not_replace_explicit_heading(self):
         deck = module.extract_decks(f"### 正确名称\n作者：某某\n{STANDARD_CODE}")[0]
         self.assertEqual(deck["deck_name_hint"], "正确名称")

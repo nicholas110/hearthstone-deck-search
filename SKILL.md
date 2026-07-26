@@ -27,7 +27,7 @@ Follow these rules exactly:
 - Use one block per deck; never combine multiple decks into one block.
 - Keep commentary, date, win rate, source, and video link outside the block.
 - Deduplicate identical deck codes before responding, except that IYingDi tournament entries from different players or events remain separate evidence records.
-- Prefer `deck_name_hint`, `deck_name`, or `representative_deck.zh_name`. For Bilibili, use `未命名卡组` when the description provides no name; never derive one from the title.
+- Prefer `deck_name_hint`, `deck_name`, or `representative_deck.zh_name`. For Bilibili, use the description name first, then a concise title-derived archetype when the description has only a code. Use `未命名卡组` only when neither source surface identifies a deck concept.
 - Omit a code block only when no valid code exists. Explain that limitation directly.
 - A table may summarize results, but it never replaces the required copyable blocks.
 
@@ -99,7 +99,7 @@ The script:
 4. Filters and orders archive dates before requesting individual video descriptions.
 5. Stops after reaching the requested result limit or exhausting the matching candidates.
 6. Paces requests, retries transient failures, and stops immediately when Bilibili risk control is detected.
-7. Fully parses Deckstrings and deterministically normalizes names from description headings or labels.
+7. Fully parses Deckstrings, normalizes description names, and derives a high-confidence title name for a single unnamed code.
 8. Writes to stdout only. It never creates a persistent cache.
 
 If a source configured as `video_collection` resolves to a standalone video, report the configuration error. Do not silently treat it as a single-video source.
@@ -156,7 +156,7 @@ Always surface every `warnings` entry. If a ranking source reports stale records
 - Treat the script's non-empty `deck_name_hint` as the authoritative display name. The script may remove player IDs, server/rank prefixes, records, win rates, and match counts while preserving the source-derived core deck name. Reproduce that value exactly; do not let the model shorten, translate, embellish, or infer another archetype.
 - Treat IYingDi `deck_name` as an authoritative structured source field. Preserve it exactly and keep the player and event beside the code block.
 - Treat NetEase Dashen `deck_name` as a deterministic source-derived field. Preserve it exactly and report whether it came from `netease_title`, `netease_archetype`, or the unnamed fallback.
-- If `deck_name_hint` is empty, use `未命名卡组`. Do not invent a name from the video title, gameplay, class, cards, or model knowledge.
+- If `deck_name_hint` is empty, inspect the video `title` before using `未命名卡组`. Extract only a clearly stated concise archetype, remove creator names, records, hype, and gameplay narration, and identify it as title-inferred in the surrounding explanation. Do not derive a deck from gameplay frames or card knowledge alone.
 - For user-facing Bilibili deck results, prefer `scripts/search_bilibili.py ... --format markdown` and reproduce its fenced deck blocks verbatim. Never manually rewrite the normalized `###` name line.
 - State the video date, streamer, uploader, collection, and video URL.
 - Keep multiple codes from one video as separate results.

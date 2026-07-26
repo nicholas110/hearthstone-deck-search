@@ -74,6 +74,55 @@ SERVER_RANK_PREFIX_RE = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
+TITLE_DECK_NAME_RE = re.compile(
+    r"""
+    (?P<deck_name>
+        [A-Za-z0-9+一-龥·]{1,16}?
+        (?:
+            死亡骑士|恶魔猎手|战士|萨满|潜行者|盗贼|圣骑士|猎人|德鲁伊|术士|法师|牧师|
+            DK|dk|战|萨|贼|骑|猎|德|术|法|牧|瞎
+        )
+    )
+    """,
+    re.VERBOSE,
+)
+TITLE_NOISE_PREFIX_RE = re.compile(
+    r"""
+    ^(?:
+        \d+\s*[-–—:：]\s*\d+
+        |
+        \d+\s*(?:连胜|胜)
+        |
+        最新|新版|新版本|标准|狂野|国服|美服|欧服|亚服|
+        无敌|最强|强力|登顶|高分段|推荐|必玩|天梯|
+        [A-Za-z0-9一-龥·]{1,8}(?:老师|神)
+    )+
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+TITLE_ACTION_PREFIX_RE = re.compile(
+    r"^(?:吊打|击败|暴打|打爆|对阵|大战|翻盘|斩杀|拿捏|偶遇|遇到|克制)"
+)
+TITLE_FALSE_NAMES = {
+    "玩法",
+    "打法",
+    "手法",
+    "想法",
+    "办法",
+    "魔法",
+    "战士",
+    "萨满",
+    "潜行者",
+    "盗贼",
+    "圣骑士",
+    "猎人",
+    "德鲁伊",
+    "术士",
+    "法师",
+    "牧师",
+    "死亡骑士",
+    "恶魔猎手",
+}
 
 
 class BilibiliApiError(RuntimeError):
@@ -438,6 +487,33 @@ def normalize_name_hint(value: str) -> tuple[str, bool]:
     return name, name != original
 
 
+def infer_name_from_title(title: str, creator_name: str | None = None) -> str | None:
+    text = re.sub(r"^(?:\s*【[^】]+】\s*)+", "", str(title or "")).strip()
+    if creator_name:
+        text = re.sub(rf"^\s*{re.escape(creator_name)}\s*[：:]?\s*", "", text)
+    text = re.sub(r"^[^：:！!?？]{1,12}[：:]\s*", "", text)
+
+    for raw_clause in re.split(r"[！!?？|｜\r\n]+", text):
+        clause = raw_clause.strip(" \t,，;；。.:：")
+        if not clause:
+            continue
+        clause = TITLE_NOISE_PREFIX_RE.sub("", clause).strip()
+        for match in TITLE_DECK_NAME_RE.finditer(clause):
+            candidate = match.group("deck_name").strip()
+            candidate = TITLE_NOISE_PREFIX_RE.sub("", candidate).strip()
+            if (
+                2 <= len(candidate) <= 16
+                and candidate not in TITLE_FALSE_NAMES
+                and not any(
+                    candidate.endswith(false_name)
+                    for false_name in ("玩法", "打法", "手法", "想法", "办法", "魔法")
+                )
+                and not TITLE_ACTION_PREFIX_RE.search(candidate)
+            ):
+                return candidate
+    return None
+
+
 def clean_name_hint(value: str, require_explicit: bool = False) -> tuple[str | None, str | None]:
     raw = value.strip()
     if not raw:
@@ -487,7 +563,11 @@ def find_name_hint(
     return None, None
 
 
-def extract_decks(description: str) -> list[dict[str, Any]]:
+def extract_decks(
+    description: str,
+    title: str | None = None,
+    creator_name: str | None = None,
+) -> list[dict[str, Any]]:
     lines = description.splitlines()
     results: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -509,6 +589,11 @@ def extract_decks(description: str) -> list[dict[str, Any]]:
                     "description_excerpt": excerpt[:500],
                 }
             )
+    if len(results) == 1 and not results[0]["deck_name_hint"] and title:
+        title_hint = infer_name_from_title(title, creator_name)
+        if title_hint:
+            results[0]["deck_name_hint"] = title_hint
+            results[0]["deck_name_source"] = "video_title_inferred"
     return results
 
 
@@ -543,7 +628,7 @@ def scan_video(
 
     title = str(video.get("title") or archive.get("title") or "")
     description = str(video.get("desc") or "")
-    decks = extract_decks(description)
+    decks = extract_decks(description, title, str(source.get("creator_name") or ""))
     if keyword:
         decks = [
             deck

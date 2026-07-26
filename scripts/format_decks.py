@@ -140,6 +140,9 @@ def collect_decks(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 f"日期：{safe_text(item.get('published_at'))[:10]}" if item.get("published_at") else None,
                 f"合集：{safe_text(item.get('collection_name'))}" if item.get("collection_name") else None,
                 f"播放：{item.get('views')}" if item.get("views") is not None else None,
+                "名称依据：视频标题"
+                if item.get("deck_name_source") == "video_title_inferred"
+                else None,
             ]
             decks.append(
                 {

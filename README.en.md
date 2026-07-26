@@ -114,7 +114,7 @@ zlsjs美服登顶任务贼，战绩是43-26 → 任务贼
 lvge 卡德加法 → lvge 卡德加法
 ```
 
-The script performs this normalization. The AI must not invent a replacement name from the video title or card knowledge.
+Name priority is: explicit description name, clearly stated title archetype, then `未命名卡组`. The script handles common title patterns. If the parser still misses a clear title name, the AI should extract the concise archetype and identify it as title-inferred, without inventing from card knowledge.
 
 ## Direct script usage
 
