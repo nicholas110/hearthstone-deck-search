@@ -1,11 +1,21 @@
-version: 1
+version: 2
 request_timeout_seconds: 15
 retry_max_attempts: 4
 retry_backoff_seconds: [1, 2, 4]
 default_days: 30
-max_workers: 6
+max_api_requests: 30
+request_delay_seconds: 0.35
+ranking_min_games: 100
+ranking_stale_days: 7
+arena_stale_days: 90
+battlegrounds_stale_days: 90
 deck_api_base: "https://udagyciuulrg.sealosgzg.site/api"
+deck_source_name: "HS卡牌大师小程序"
+deck_source_homepage: "https://udagyciuulrg.sealosgzg.site/api/config/last-update"
+deck_source_provenance: "第三方社区统计服务，非暴雪官方数据源"
 official_rank_api_base: "https://webapi.blizzard.cn/hs-rank-api-server/api"
+official_source_name: "炉石传说国服官方排行榜"
+official_source_homepage: "https://hs.blizzard.cn/"
 
 sources:
   - id: "lvge-violet-prison"
@@ -30,6 +40,7 @@ sources:
     platform: "bilibili"
     kind: "video_collection"
     entry_url: "https://space.bilibili.com/402158519/lists/6107184?type=season"
+    seed_bvid: "BV19tYvzdErW"
     creator_name: "异灵术"
     creator_aliases: ["异灵术老师", "异灵术"]
     enabled: true
@@ -39,6 +50,7 @@ sources:
     platform: "bilibili"
     kind: "video_collection"
     entry_url: "https://space.bilibili.com/402158519/lists/6004815?type=season"
+    seed_bvid: "BV1xGadzeEUC"
     creator_name: "奶粉"
     creator_aliases: ["奶粉"]
     enabled: true
@@ -48,6 +60,7 @@ sources:
     platform: "bilibili"
     kind: "video_collection"
     entry_url: "https://space.bilibili.com/402158519/lists/6704345?type=season"
+    seed_bvid: "BV16n1bBhEGA"
     creator_name: "雏雏"
     creator_aliases: ["雏雏"]
     enabled: true
@@ -57,6 +70,7 @@ sources:
     platform: "bilibili"
     kind: "video_collection"
     entry_url: "https://space.bilibili.com/402158519/lists/7697742?type=season"
+    seed_bvid: "BV1WQGx62EVz"
     creator_name: "XHope"
     creator_aliases: ["XHope", "xhope"]
     enabled: true
@@ -66,6 +80,7 @@ sources:
     platform: "bilibili"
     kind: "video_collection"
     entry_url: "https://space.bilibili.com/402158519/lists/6375908?type=season"
+    seed_bvid: "BV1c9WuzrEzZ"
     creator_name: "九千羽"
     creator_aliases: ["九千羽"]
     enabled: true
@@ -75,6 +90,7 @@ sources:
     platform: "bilibili"
     kind: "video_collection"
     entry_url: "https://space.bilibili.com/402158519/lists/6113866?type=season"
+    seed_bvid: "BV1C81xBoEwJ"
     creator_name: "贤菜"
     creator_aliases: ["贤菜"]
     enabled: true

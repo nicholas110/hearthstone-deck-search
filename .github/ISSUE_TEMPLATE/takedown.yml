@@ -1,0 +1,37 @@
+name: 数据源下架申请 / Takedown request
+description: 请求删除或停用可能涉及权利问题的数据源
+title: "[Takedown] "
+labels: ["takedown"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请只提交处理请求所需的信息，不要公开身份证件、电话号码或其他敏感个人信息。
+  - type: input
+    id: source
+    attributes:
+      label: 数据源名称
+      placeholder: 例如 lvge-violet-prison
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: 涉及链接
+      placeholder: https://www.bilibili.com/video/BV...
+    validations:
+      required: true
+  - type: textarea
+    id: basis
+    attributes:
+      label: 申请理由
+      description: 请说明你与相关内容的关系以及希望采取的处理方式。
+    validations:
+      required: true
+  - type: checkboxes
+    id: declaration
+    attributes:
+      label: 确认
+      options:
+        - label: 我确认以上信息真实，并理解维护者可能要求补充验证材料。
+          required: true

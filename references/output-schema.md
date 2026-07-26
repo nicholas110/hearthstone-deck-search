@@ -8,6 +8,7 @@ The Bilibili search script returns one JSON object.
 - `sources`: resolved collection metadata and scan counts.
 - `results`: one row per extracted deck code.
 - `warnings`: partial failures and configuration problems.
+- `request_metrics`: request budget, API request count, candidate count, scan count, and risk-control state.
 
 ## Result fields
 
@@ -17,9 +18,9 @@ The Bilibili search script returns one JSON object.
 - `collection_id` and `collection_name`: resolved UGC season.
 - `bvid`, `video_url`, `title`, and `published_at`: video evidence.
 - `deck_name_hint`: nearest description heading or label before the code. When present, this is the authoritative display name and must be preserved exactly.
-- `deck_name_source`: `description` when the name was extracted from the public video description; otherwise `null`.
+- `deck_name_source`: `description_heading`, `description_label`, `description_inline`, or `description_line`; otherwise `null`.
 - `deck_code`: complete extracted deck code.
-- `deck_code_valid`: structural Base64 validation.
+- `deck_code_valid`: full Hearthstone Deckstring structural validation.
 - `description_excerpt`: short local evidence around the code.
 - `views`: current Bilibili view count when available.
 

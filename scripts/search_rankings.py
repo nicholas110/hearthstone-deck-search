@@ -15,11 +15,13 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from search_bilibili import DEFAULT_CONFIG, load_config
+from deckstrings import validate_deck_code
+from search_bilibili import DEFAULT_CONFIG, load_config, positive_int
 
 
 CHINA_TZ = dt.timezone(dt.timedelta(hours=8))
 RETRY_HTTP_CODES = {408, 429, 500, 502, 503, 504}
+RETRY_API_CODES = {-1, -2, -500, -503}
 RANK_ZH = {
     "top_legend": "传说前列",
     "top_5k": "传说前5000",
@@ -109,15 +111,28 @@ def iso_now() -> str:
     return dt.datetime.now(CHINA_TZ).isoformat()
 
 
+def parse_timestamp(value: Any) -> dt.datetime | None:
+    if not value:
+        return None
+    text = str(value).strip()
+    for parser in (
+        lambda: dt.datetime.fromisoformat(text.replace("Z", "+00:00")),
+        lambda: dt.datetime.strptime(text, "%Y.%m.%d %H:%M:%S").replace(tzinfo=CHINA_TZ),
+        lambda: dt.datetime.strptime(text, "%Y-%m-%d %H:%M:%S").replace(tzinfo=CHINA_TZ),
+    ):
+        try:
+            return parser()
+        except ValueError:
+            continue
+    return None
+
+
 def stale_warning(values: list[Any], label: str, max_age_days: int = 90) -> str | None:
     parsed: list[dt.datetime] = []
     for value in values:
-        if not value:
-            continue
-        try:
-            parsed.append(dt.datetime.fromisoformat(str(value).replace("Z", "+00:00")))
-        except ValueError:
-            continue
+        parsed_value = parse_timestamp(value)
+        if parsed_value:
+            parsed.append(parsed_value)
     if not parsed:
         return None
     newest = max(parsed)
@@ -152,11 +167,16 @@ class RetryJsonClient:
                     payload = json.loads(response.read().decode("utf-8"))
                 if isinstance(payload, dict) and "code" in payload:
                     if payload.get("code") != 0:
-                        raise RuntimeError(
+                        error = RuntimeError(
                             f"API code={payload.get('code')}: {payload.get('message', 'unknown error')}"
                         )
-                    return payload.get("data")
-                return payload
+                        last_error = error
+                        if int(payload.get("code") or 0) not in RETRY_API_CODES:
+                            raise error
+                    else:
+                        return payload.get("data")
+                else:
+                    return payload
             except urllib.error.HTTPError as error:
                 last_error = error
                 if error.code not in RETRY_HTTP_CODES:
@@ -193,7 +213,7 @@ def archetype_keys(name: Any, zh_name: Any) -> set[str]:
 def build_deck_index(decks: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     index: dict[str, list[dict[str, Any]]] = {}
     for deck in decks:
-        if not deck.get("deckcode"):
+        if not deck.get("deckcode") or not validate_deck_code(str(deck.get("deckcode"))):
             continue
         for key in archetype_keys(deck.get("name"), deck.get("zhName")):
             index.setdefault(key, []).append(deck)
@@ -224,6 +244,7 @@ def flatten_decks(payload: Any) -> list[dict[str, Any]]:
 def slim_deck(deck: dict[str, Any] | None) -> dict[str, Any] | None:
     if not deck:
         return None
+    code = deck.get("deckcode")
     return {
         "deck_id": deck.get("deckId"),
         "name": deck.get("name"),
@@ -235,7 +256,8 @@ def slim_deck(deck: dict[str, Any] | None) -> dict[str, Any] | None:
         "winrate": deck.get("winrate"),
         "games": deck.get("games"),
         "dust": deck.get("dust"),
-        "deck_code": deck.get("deckcode"),
+        "deck_code": code,
+        "deck_code_valid": bool(code and validate_deck_code(str(code))),
         "updated_at": deck.get("updatedAt") or deck.get("createdAt"),
     }
 
@@ -264,6 +286,7 @@ def choose_representative(
 def search_deck_rankings(args: argparse.Namespace, client: RetryJsonClient, config: dict[str, Any]) -> dict[str, Any]:
     base = config["deck_api_base"]
     class_key = normalize_class(args.class_name)
+    minimum_games = int(config.get("ranking_min_games", 100))
     archetype_data = client.get(f"{base}/archetypes/getArchetypes", {"mode": args.mode}) or {}
     deck_data = client.get(
         f"{base}/decks/queryDecks",
@@ -278,6 +301,8 @@ def search_deck_rankings(args: argparse.Namespace, client: RetryJsonClient, conf
             item = dict(raw)
             item.setdefault("rank", segment)
             if class_key and normalized(item.get("class")) != class_key:
+                continue
+            if float(item.get("popularityNum") or 0) < minimum_games:
                 continue
             if args.archetype:
                 needles = archetype_keys(args.archetype, args.archetype)
@@ -311,6 +336,7 @@ def search_deck_rankings(args: argparse.Namespace, client: RetryJsonClient, conf
         ranked.sort(key=lambda item: item["_score"], reverse=True)
 
     results = []
+    warnings = []
     for position, item in enumerate(ranked[: args.limit], start=1):
         key = normalized(item.get("name") or item.get("zhName"))
         representative = choose_representative(item, deck_index)
@@ -320,14 +346,23 @@ def search_deck_rankings(args: argparse.Namespace, client: RetryJsonClient, conf
                     f"{base}/decks/getDecks",
                     {"mode": args.mode, "archetype": item.get("name")},
                 )
-                exact_decks = [deck for deck in flatten_decks(exact_payload) if deck.get("deckcode")]
+                exact_decks = [
+                    deck
+                    for deck in flatten_decks(exact_payload)
+                    if deck.get("deckcode") and validate_deck_code(str(deck.get("deckcode")))
+                ]
                 exact_decks.sort(
                     key=lambda deck: (deck.get("rank") == item.get("rank"), deck_score(deck)),
                     reverse=True,
                 )
                 representative = exact_decks[0] if exact_decks else None
-            except Exception:
+            except Exception as error:
+                warnings.append(f"representative deck lookup for {item.get('name')}: {error}")
                 representative = None
+        representative_slim = slim_deck(representative)
+        if representative_slim and representative_slim.get("deck_code") and not representative_slim["deck_code_valid"]:
+            warnings.append(f"invalid representative deck code for {item.get('name')}")
+            representative_slim = None
         results.append(
             {
                 "position": position,
@@ -342,15 +377,21 @@ def search_deck_rankings(args: argparse.Namespace, client: RetryJsonClient, conf
                 "popularity_games": item.get("popularityNum"),
                 "climbing_speed": item.get("climbingSpeed"),
                 "rank_samples": samples.get(key, []),
-                "representative_deck": slim_deck(representative),
-                "has_deck_code": bool(representative and representative.get("deckcode")),
+                "representative_deck": representative_slim,
+                "has_deck_code": bool(representative_slim and representative_slim.get("deck_code_valid")),
             }
         )
 
     freshness = None
-    warnings = []
     try:
         freshness = client.get(f"{base}/config/last-update")
+        warning = stale_warning(
+            [(freshness or {}).get("lastUpdateTime") if isinstance(freshness, dict) else freshness],
+            "Constructed deck rankings",
+            int(config.get("ranking_stale_days", 7)),
+        )
+        if warning:
+            warnings.append(warning)
     except Exception as error:
         warnings.append(f"freshness: {error}")
     return {
@@ -361,10 +402,18 @@ def search_deck_rankings(args: argparse.Namespace, client: RetryJsonClient, conf
             "archetype": args.archetype,
             "sort": args.sort,
             "limit": args.limit,
+            "minimum_games": minimum_games,
         },
-        "source": "HS卡牌大师小程序",
+        "source": config.get("deck_source_name", "Community deck statistics"),
+        "source_url": config.get("deck_source_homepage"),
+        "source_provenance": config.get("deck_source_provenance"),
         "fetched_at": iso_now(),
         "freshness": freshness,
+        "ranking_method": {
+            "score_formula": "winrate + log10(popularity_games + 10) * 0.9 + climbing_speed * 0.15 + rank_segment_weight * 1.5",
+            "minimum_games": minimum_games,
+            "sort": args.sort,
+        },
         "results": results,
         "deck_code_coverage": {
             "ranked_count": len(results),
@@ -404,7 +453,8 @@ def search_official_rankings(args: argparse.Namespace, client: RetryJsonClient, 
             "page": max(1, args.page),
             "limit": args.limit,
         },
-        "source": "炉石传说国服官方排行榜",
+        "source": config.get("official_source_name", "炉石传说国服官方排行榜"),
+        "source_url": config.get("official_source_homepage"),
         "fetched_at": iso_now(),
         "total": data.get("total"),
         "results": [
@@ -425,7 +475,9 @@ def search_arena_classes(args: argparse.Namespace, client: RetryJsonClient, conf
     return {
         "route": "arena_class_rankings",
         "query": {"limit": args.limit},
-        "source": "HS卡牌大师小程序",
+        "source": config.get("deck_source_name", "Community deck statistics"),
+        "source_url": config.get("deck_source_homepage"),
+        "source_provenance": config.get("deck_source_provenance"),
         "fetched_at": iso_now(),
         "results": [
             {
@@ -436,7 +488,7 @@ def search_arena_classes(args: argparse.Namespace, client: RetryJsonClient, conf
             }
             for position, item in enumerate(rows, start=1)
         ],
-        "warnings": [],
+        "warnings": ["Arena class rankings do not expose record timestamps; freshness cannot be verified."],
     }
 
 
@@ -450,13 +502,19 @@ def search_arena_cards(args: argparse.Namespace, client: RetryJsonClient, config
     }[args.sort]
     rows = sorted(data, key=lambda item: float(item.get(sort_field) or 0), reverse=True)[: args.limit]
     warnings = []
-    warning = stale_warning([item.get("updatedAt") for item in data], "Arena card rankings")
+    warning = stale_warning(
+        [item.get("updatedAt") for item in data],
+        "Arena card rankings",
+        int(config.get("arena_stale_days", 90)),
+    )
     if warning:
         warnings.append(warning)
     return {
         "route": "arena_card_rankings",
         "query": {"class": class_key, "sort": args.sort, "limit": args.limit},
-        "source": "HS卡牌大师小程序",
+        "source": config.get("deck_source_name", "Community deck statistics"),
+        "source_url": config.get("deck_source_homepage"),
+        "source_provenance": config.get("deck_source_provenance"),
         "fetched_at": iso_now(),
         "results": [
             {
@@ -487,7 +545,11 @@ def search_battlegrounds(args: argparse.Namespace, client: RetryJsonClient, conf
     rows.sort(key=lambda item: (int(item.get("comp_tier") or 99), str(item.get("comp_name") or "")))
     results = []
     warnings = []
-    warning = stale_warning([item.get("comp_last_updated") for item in rows], "Battlegrounds compositions")
+    warning = stale_warning(
+        [item.get("comp_last_updated") for item in rows],
+        "Battlegrounds compositions",
+        int(config.get("battlegrounds_stale_days", 90)),
+    )
     if warning:
         warnings.append(warning)
     for position, item in enumerate(rows[: args.limit], start=1):
@@ -519,7 +581,9 @@ def search_battlegrounds(args: argparse.Namespace, client: RetryJsonClient, conf
     return {
         "route": "battlegrounds_comp_rankings",
         "query": {"tier": args.tier, "limit": args.limit, "details": args.details},
-        "source": "HS卡牌大师小程序",
+        "source": config.get("deck_source_name", "Community deck statistics"),
+        "source_url": config.get("deck_source_homepage"),
+        "source_provenance": config.get("deck_source_provenance"),
         "fetched_at": iso_now(),
         "results": results,
         "contains_constructed_deck_codes": False,
@@ -537,7 +601,7 @@ def build_parser() -> argparse.ArgumentParser:
     deck.add_argument("--class", dest="class_name")
     deck.add_argument("--archetype")
     deck.add_argument("--sort", choices=["score", "winrate", "popularity"], default="score")
-    deck.add_argument("--limit", type=int, default=5)
+    deck.add_argument("--limit", type=positive_int, default=5)
     deck.add_argument("--format", choices=["json", "markdown"], default="json")
 
     official = subparsers.add_parser("official", help="Read official player ladder rankings.")
@@ -547,12 +611,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="standard",
     )
     official.add_argument("--season-id", type=int)
-    official.add_argument("--page", type=int, default=1)
-    official.add_argument("--limit", type=int, default=10)
+    official.add_argument("--page", type=positive_int, default=1)
+    official.add_argument("--limit", type=positive_int, default=10)
     official.add_argument("--format", choices=["json", "markdown"], default="json")
 
     arena_classes = subparsers.add_parser("arena-classes", help="Rank Arena classes.")
-    arena_classes.add_argument("--limit", type=int, default=11)
+    arena_classes.add_argument("--limit", type=positive_int, default=11)
     arena_classes.add_argument("--format", choices=["json", "markdown"], default="json")
 
     arena_cards = subparsers.add_parser("arena-cards", help="Rank Arena cards for one class.")
@@ -562,12 +626,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["included-winrate", "played-winrate", "popularity"],
         default="included-winrate",
     )
-    arena_cards.add_argument("--limit", type=int, default=10)
+    arena_cards.add_argument("--limit", type=positive_int, default=10)
     arena_cards.add_argument("--format", choices=["json", "markdown"], default="json")
 
     battlegrounds = subparsers.add_parser("battlegrounds", help="Rank Battlegrounds compositions.")
-    battlegrounds.add_argument("--tier", type=int)
-    battlegrounds.add_argument("--limit", type=int, default=10)
+    battlegrounds.add_argument("--tier", type=int, choices=[1, 2, 3, 4])
+    battlegrounds.add_argument("--limit", type=positive_int, default=10)
     battlegrounds.add_argument("--details", action="store_true")
     battlegrounds.add_argument("--format", choices=["json", "markdown"], default="json")
     return parser
@@ -577,7 +641,7 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     if hasattr(args, "limit"):
-        args.limit = min(max(1, args.limit), 100)
+        args.limit = min(args.limit, 100)
     config = load_config(args.config)
     client = RetryJsonClient(
         timeout=int(config.get("request_timeout_seconds", 15)),
@@ -605,7 +669,7 @@ def main() -> int:
         output["query"]["config"] = str(output["query"]["config"])
         print(json.dumps(output, ensure_ascii=False, indent=2))
         return 2
-    if args.format == "markdown" and args.command == "deck":
+    if args.format == "markdown":
         from format_decks import render_markdown
 
         print(render_markdown(output))

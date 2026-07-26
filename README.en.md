@@ -8,8 +8,8 @@ It runs entirely on the user's machine. No hosted workflow, background service, 
 
 ## Features
 
-- Search maintained Bilibili collections by creator alias or deck keyword.
-- Distinguish standalone video URLs from videos that belong to a Bilibili UGC collection.
+- Search maintained Bilibili collections and single videos by creator alias or deck keyword.
+- Dispatch `single_video` and `video_collection` sources explicitly.
 - Expand collection pages and inspect recent video titles and descriptions in real time.
 - Extract and structurally validate complete Hearthstone deck codes while preserving names already present in video descriptions.
 - Return one copyable Markdown code block per deck.
@@ -17,7 +17,8 @@ It runs entirely on the user's machine. No hosted workflow, background service, 
 - Search official Chinese Hearthstone player rankings.
 - Search Arena class and card rankings.
 - Search Battlegrounds composition tiers and optional strategy details.
-- Retry transient network failures, timeouts, rate limits, and supported server errors.
+- Use a finite request budget, paced sequential scans, and early stopping to reduce Bilibili risk-control triggers.
+- Retry transient failures and stop further requests immediately when Bilibili risk control is detected.
 - Warn when a data source appears stale.
 - Never cache fetched results.
 
@@ -47,6 +48,12 @@ git clone https://github.com/nicholas110/hearthstone-deck-search.git ~/.claude/s
 
 Start a new Claude Code session after installation.
 
+Update:
+
+```powershell
+git -C "$env:USERPROFILE\.claude\skills\hearthstone-deck-search" pull --ff-only
+```
+
 ### Codex
 
 Windows PowerShell:
@@ -59,6 +66,12 @@ macOS or Linux:
 
 ```bash
 git clone https://github.com/nicholas110/hearthstone-deck-search.git ~/.codex/skills/hearthstone-deck-search
+```
+
+Update an installed skill:
+
+```bash
+git -C ~/.codex/skills/hearthstone-deck-search pull --ff-only
 ```
 
 ## Example prompts
@@ -99,6 +112,12 @@ Search all configured Bilibili collections for a deck:
 python scripts/search_bilibili.py --keyword "偷牌牧" --days 30 --limit 10 --format markdown
 ```
 
+Search a configured single-video source:
+
+```bash
+python scripts/search_bilibili.py --source "one-video-source" --days 0 --format markdown
+```
+
 Search constructed deck rankings:
 
 ```bash
@@ -119,7 +138,7 @@ python scripts/search_rankings.py arena-cards --class "死亡骑士" --limit 10
 python scripts/search_rankings.py battlegrounds --tier 1 --details --limit 5
 ```
 
-## Add a Bilibili collection
+## Add a Bilibili source
 
 Edit [`references/sources.yaml`](references/sources.yaml) and add a source entry:
 
@@ -141,6 +160,45 @@ Edit [`references/sources.yaml`](references/sources.yaml) and add a source entry
 
 When `kind` is `video_collection`, a standalone video is treated as a configuration error instead of being silently accepted.
 
+For a collection URL, also configure a verified video from that season as `seed_bvid`. The script prefers the public UGC Season metadata embedded in that video and avoids unnecessary pagination:
+
+```yaml
+- id: "creator-collection-id"
+  platform: "bilibili"
+  kind: "video_collection"
+  entry_url: "https://space.bilibili.com/123/lists/456?type=season"
+  seed_bvid: "BVxxxxxxxxxx"
+  creator_name: "Creator name"
+  creator_aliases: ["Alias"]
+  enabled: true
+  tags: ["Hearthstone"]
+```
+
+Use this structure for one video:
+
+```yaml
+- id: "one-video-source"
+  platform: "bilibili"
+  kind: "single_video"
+  entry_url: "https://www.bilibili.com/video/BVxxxxxxxxxx/"
+  creator_name: "Creator name"
+  creator_aliases: ["Alias"]
+  enabled: true
+  tags: ["Hearthstone"]
+```
+
+`--days` rejects negative values, `--limit` must be positive, each run is capped by `max_api_requests`, and scanning stops when enough results have been found.
+
+## Sources and methodology
+
+- Bilibili: user-triggered reads of public video and UGC Season metadata without downloading videos or using account cookies.
+- Constructed, Arena, and Battlegrounds statistics: a third-party community source, not Blizzard.
+- Chinese player ladder: the official Chinese Hearthstone leaderboard, containing players and positions only.
+- Composite archetype ranking filters samples below `ranking_min_games` and returns the exact score formula in its output.
+- Every copyable code must pass full Deckstring parsing, including header, version, format, hero, cards, and optional sideboards.
+
+See [`references/data-sources.md`](references/data-sources.md) for details.
+
 ## Data semantics
 
 - Bilibili results indicate that a creator recently played or showcased a deck.
@@ -149,6 +207,7 @@ When `kind` is `video_collection`, a standalone video is treated as a configurat
 - Official ladder rankings contain player positions, not deck codes.
 - Arena and Battlegrounds data must not be described as constructed-deck rankings.
 - A structurally valid deck code is not guaranteed to be legal in the current game patch.
+- Timestamp-free data is labeled as unverifiable, and stale timestamped data produces a warning.
 
 ## Privacy and storage
 
@@ -167,18 +226,40 @@ If you are a rights holder and believe that a configured source infringes your r
 
 ```text
 hearthstone-deck-search/
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   └── workflows/tests.yml
+├── LICENSE
 ├── SKILL.md
 ├── agents/
 │   └── openai.yaml
 ├── references/
 │   ├── output-schema.md
+│   ├── data-sources.md
 │   └── sources.yaml
-└── scripts/
+├── scripts/
+    ├── deckstrings.py
     ├── format_decks.py
     ├── search_bilibili.py
     └── search_rankings.py
+└── tests/
+    ├── test_bilibili.py
+    ├── test_deckstrings.py
+    ├── test_formatters.py
+    └── test_rankings.py
 ```
+
+## Tests
+
+```bash
+python -m compileall -q scripts tests
+python -m unittest discover -s tests -v
+```
+
+GitHub Actions runs the offline suite on Python 3.10 and 3.13. CI does not batch-query Bilibili.
 
 ## Disclaimer
 
 This is an unofficial community project and is not affiliated with, endorsed by, or sponsored by Blizzard Entertainment or Bilibili. Hearthstone and Blizzard are trademarks or registered trademarks of Blizzard Entertainment, Inc. Bilibili is a trademark of its respective owner. Public endpoint behavior and third-party data availability may change without notice.
+
+The project code is available under the [MIT License](LICENSE). That license does not grant rights to third-party videos, titles, descriptions, trademarks, or data.

@@ -27,7 +27,7 @@ Follow these rules exactly:
 - Use one block per deck; never combine multiple decks into one block.
 - Keep commentary, date, win rate, source, and video link outside the block.
 - Deduplicate identical deck codes before responding.
-- Prefer a concise `deck_name_hint` or `representative_deck.zh_name`. If unavailable, derive a conservative short name from the title; do not invent an archetype.
+- Prefer `deck_name_hint` or `representative_deck.zh_name`. For Bilibili, use `未命名卡组` when the description provides no name; never derive one from the title.
 - Omit a code block only when no valid code exists. Explain that limitation directly.
 - A table may summarize results, but it never replaces the required copyable blocks.
 
@@ -40,7 +40,7 @@ Follow these rules exactly:
 
 ## Search configured Bilibili collections
 
-Read `references/sources.yaml` only when adding or diagnosing sources. Normal searches should let the script load it.
+Read `references/sources.yaml` and `references/data-sources.md` only when adding, diagnosing, or explaining sources. Normal searches should let the scripts load the registry.
 
 Run:
 
@@ -48,6 +48,7 @@ Run:
 python scripts/search_bilibili.py --creator "驴鸽" --days 30 --limit 10 --format markdown
 python scripts/search_bilibili.py --keyword "偷牌牧" --days 30 --limit 10 --format markdown
 python scripts/search_bilibili.py --creator "奶粉" --keyword "战士" --days 14 --limit 5 --format markdown
+python scripts/search_bilibili.py --source "one-video-source" --days 0 --format markdown
 python scripts/search_bilibili.py --list-sources
 ```
 
@@ -56,14 +57,17 @@ Resolve relative paths from this skill directory. Pass `--days 0` only when the 
 The script:
 
 1. Matches creator names and aliases against maintained sources.
-2. Distinguishes an individual video from a video that belongs to a Bilibili UGC season.
-3. Expands every section and page of the configured collection.
-4. Filters archive dates before requesting individual video descriptions.
-5. Retries transient network, timeout, rate-limit, and server errors.
-6. Extracts plausible Hearthstone deck codes and their nearest description headings.
-7. Writes JSON to stdout only. It never creates a cache.
+2. Dispatches `single_video` and `video_collection` sources explicitly.
+3. Prefers collection episodes embedded in a seed video's public metadata and uses collection pagination only as a fallback.
+4. Filters and orders archive dates before requesting individual video descriptions.
+5. Stops after reaching the requested result limit or the configured request budget.
+6. Paces requests, retries transient failures, and stops immediately when Bilibili risk control is detected.
+7. Fully parses Deckstrings and extracts names from explicit description headings or labels.
+8. Writes to stdout only. It never creates a persistent cache.
 
 If a source configured as `video_collection` resolves to a standalone video, report the configuration error. Do not silently treat it as a single-video source.
+
+Treat request-budget exhaustion and Bilibili `-352` or HTTP `412` responses as partial source failures. Do not bypass risk control or ask the user for account cookies.
 
 ## Search rankings
 
@@ -100,6 +104,7 @@ Always surface every `warnings` entry. If a ranking source reports stale records
 - Keep multiple codes from one video as separate results.
 - When no code is present, do not reconstruct a deck from gameplay or title alone.
 - Explain partial source failures from the `warnings` array.
+- Treat a nonzero script exit as a source failure, not as “no matching deck.”
 
 ## Preserve source meanings
 
