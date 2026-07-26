@@ -74,6 +74,23 @@ class ExtractionTests(unittest.TestCase):
         deck = module.extract_decks(f"### lvge 卡德加法 {STANDARD_CODE}")[0]
         self.assertEqual(deck["deck_name_hint"], "lvge 卡德加法")
 
+    def test_player_server_rank_and_record_are_removed_from_name(self):
+        deck = module.extract_decks(
+            f"zlsjs美服登顶任务贼，战绩是43-26\n{STANDARD_CODE}"
+        )[0]
+        self.assertEqual(deck["deck_name_hint"], "任务贼")
+        self.assertEqual(deck["deck_name_source"], "description_line_normalized")
+
+    def test_record_suffix_is_removed_without_renaming_archetype(self):
+        deck = module.extract_decks(f"### 控制牧（战绩 18-7）\n{STANDARD_CODE}")[0]
+        self.assertEqual(deck["deck_name_hint"], "控制牧")
+        self.assertEqual(deck["deck_name_source"], "description_heading_normalized")
+
+    def test_custom_source_name_is_not_shortened_without_metadata(self):
+        deck = module.extract_decks(f"### lvge 卡德加法\n{STANDARD_CODE}")[0]
+        self.assertEqual(deck["deck_name_hint"], "lvge 卡德加法")
+        self.assertEqual(deck["deck_name_source"], "description_heading")
+
     def test_metadata_line_does_not_replace_explicit_heading(self):
         deck = module.extract_decks(f"### 正确名称\n作者：某某\n{STANDARD_CODE}")[0]
         self.assertEqual(deck["deck_name_hint"], "正确名称")

@@ -7,6 +7,7 @@
 - Storage: no persistent result cache, video download, account cookie, or credential storage.
 - Request controls: no request-count cap by default, paced sequential detail requests, transient retry, result-based early stopping, and immediate stop on risk-control responses.
 - Meaning: a result shows that a creator's maintained source published or showcased the deck. Views are not game samples.
+- Naming: remove source-adjacent player IDs, server/rank prefixes, records, win rates, and match counts deterministically. Preserve custom names when no such metadata is present. Never infer a replacement from the video title.
 
 Each source in `sources.yaml` must declare `kind` as either:
 

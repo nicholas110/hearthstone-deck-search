@@ -12,7 +12,7 @@ It runs entirely on the user's machine. No hosted workflow, background service, 
 - Search NetEase Dashen's public deck square by title, archetype, class, format, and date.
 - Dispatch `single_video` and `video_collection` sources explicitly.
 - Expand collection pages and inspect recent video titles and descriptions in real time.
-- Extract and structurally validate complete Hearthstone deck codes while preserving names already present in video descriptions.
+- Extract and structurally validate complete Hearthstone deck codes while deterministically removing player IDs, server/rank labels, records, and win-rate metadata from display names.
 - Search recent IYingDi events and structured tournament lineups.
 - Filter tournament decks by event, player, class, format, or deck keyword.
 - Return one copyable Markdown code block per deck.
@@ -105,6 +105,16 @@ AAECAa0GBsugBKiWB/ypB4CqB4SqB4O/BwzwnwSg+wbD/waFhgedrQeFvwebvweixAeyxQevyQew3weW
 ````
 
 Compatible interfaces display a copy button in the upper-right corner of each block.
+
+Display names keep only the source-derived core deck name:
+
+```text
+zlsjs美服登顶任务贼，战绩是43-26 → 任务贼
+控制牧（战绩 18-7） → 控制牧
+lvge 卡德加法 → lvge 卡德加法
+```
+
+The script performs this normalization. The AI must not invent a replacement name from the video title or card knowledge.
 
 ## Direct script usage
 

@@ -39,6 +39,41 @@ EXPLICIT_NAME_RE = re.compile(
     r"^\s*(?:#{1,6}\s*|(?:卡组|套牌)(?:名称)?\s*[:：]\s*)(.+?)\s*$",
     re.IGNORECASE,
 )
+PERFORMANCE_SUFFIX_RE = re.compile(
+    r"""
+    (?:[\s,，;；|｜/／—–-]*)
+    (?:
+        (?:战绩|成绩|胜负|record)\s*(?:是|为)?\s*[:：]?\s*\d+\s*[-–—:：]\s*\d+
+        |
+        胜率\s*[:：]?\s*\d+(?:\.\d+)?\s*%
+        |
+        (?:连胜|场次)\s*[:：]?\s*\d+
+    )
+    \s*$
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+SERVER_RANK_PREFIX_RE = re.compile(
+    r"""
+    ^
+    .{0,24}?
+    (?:国服|美服|欧服|亚服)
+    \s*
+    (?:
+        (?:传说)?登顶
+        |
+        传说(?:前)?\s*\d+
+        |
+        前\s*\d+
+        |
+        高分段
+    )?
+    \s*
+    (?P<deck_name>.+)
+    $
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
 
 
 class BilibiliApiError(RuntimeError):
@@ -373,6 +408,36 @@ def fetch_single_video(
     return metadata, candidates
 
 
+def normalize_name_hint(value: str) -> tuple[str, bool]:
+    name = value.strip()
+    original = name
+
+    while True:
+        cleaned = PERFORMANCE_SUFFIX_RE.sub("", name).strip(" \t,，;；|｜/／—–-")
+        if cleaned == name:
+            break
+        name = cleaned
+
+    bracketed = re.sub(
+        r"[（(]\s*(?:(?:战绩|成绩|胜负)\s*(?:是|为)?\s*[:：]?\s*)?"
+        r"\d+\s*[-–—:：]\s*\d+\s*[）)]\s*$",
+        "",
+        name,
+        flags=re.IGNORECASE,
+    ).strip()
+    if bracketed:
+        name = bracketed
+
+    server_match = SERVER_RANK_PREFIX_RE.match(name)
+    if server_match:
+        candidate = server_match.group("deck_name").strip(" \t,，;；|｜/／—–-")
+        if len(candidate) >= 2:
+            name = candidate
+
+    name = re.sub(r"\s{2,}", " ", name).strip()
+    return name, name != original
+
+
 def clean_name_hint(value: str, require_explicit: bool = False) -> tuple[str | None, str | None]:
     raw = value.strip()
     if not raw:
@@ -386,6 +451,7 @@ def clean_name_hint(value: str, require_explicit: bool = False) -> tuple[str | N
     else:
         source = "description_line"
     raw = re.sub(r"^(卡组|套牌)(名称|代码)?[:：\s]*", "", raw).strip()
+    raw, was_normalized = normalize_name_hint(raw)
     if (
         not raw
         or len(raw) > 80
@@ -395,6 +461,8 @@ def clean_name_hint(value: str, require_explicit: bool = False) -> tuple[str | N
         or raw.startswith(("http://", "https://"))
     ):
         return None, None
+    if was_normalized:
+        source = f"{source}_normalized"
     return raw, source
 
 
