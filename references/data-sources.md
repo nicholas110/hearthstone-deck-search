@@ -13,6 +13,18 @@ Each source in `sources.yaml` must declare `kind` as either:
 - `video_collection`: resolve a UGC season. Prefer a verified `seed_bvid` from that season.
 - `single_video`: inspect only the configured BV video.
 
+## NetEase Dashen deck square
+
+- Purpose: search a broad public corpus of community Hearthstone decks by source title, structured archetype, class, format, and date.
+- Access: user-triggered read of the public deck-square JSON used by the NetEase Dashen Hearthstone tool.
+- Authentication: none; do not use the login-bound “我的卡组” route.
+- Storage: no persistent result cache or local mirror.
+- Meaning: a result is a community deck record. It is not tournament evidence, an official ladder rank, or a controlled environment sample.
+- Naming: use a meaningful source title, otherwise the structured archetype, otherwise `未命名卡组`.
+- Validation: exclude every code that fails full Deckstring parsing.
+- Deduplication: use the source record ID and deck code.
+- Metrics: suppress placeholder win-rate values. Warn when popularity or win-rate ordering has no meaningful values.
+
 ## IYingDi tournament collections
 
 - Purpose: search structured Hearthstone tournament, qualifier, playoff, and event lineups.
@@ -50,3 +62,7 @@ The endpoints are not formally versioned public API documentation and may change
 - Arena classes: the current endpoint exposes no timestamp, so every response states that freshness cannot be verified.
 
 Always surface `warnings`. Do not describe stale or timestamp-free data as current without qualification.
+
+## Cross-source continuation
+
+Use `search_decks.py` only for unqualified deck-name discovery or explicit cross-source research. Its default fallback order is NetEase Dashen, Bilibili, IYingDi, then constructed rankings. Source-specific questions remain on their semantic route and broaden only their date or source-specific filters.

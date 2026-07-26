@@ -119,6 +119,29 @@ class FormatterTests(unittest.TestCase):
         self.assertIn("夏季预选赛", output)
         self.assertIn("| 2026-07-22 |", output)
 
+    def test_netease_dashen_deck_is_copyable(self):
+        output = render_markdown(
+            {
+                "route": "netease_dashen_decks",
+                "source_url": "https://example.test/decks",
+                "results": [
+                    {
+                        "deck_name": "控制牧",
+                        "deck_code": STANDARD_CODE,
+                        "deck_code_valid": True,
+                        "class_zh": "牧师",
+                        "format": "标准",
+                        "published_at": "2026-07-26T12:00:00+08:00",
+                        "dust": 10120,
+                        "winrate": 61.2,
+                    }
+                ],
+            }
+        )
+        self.assertIn("###控制牧", output)
+        self.assertIn("胜率：61.2%", output)
+        self.assertIn("https://example.test/decks", output)
+
 
 if __name__ == "__main__":
     unittest.main()

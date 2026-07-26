@@ -24,6 +24,10 @@ iyingdi_event_page_size: 20
 iyingdi_max_api_requests: 8
 iyingdi_request_delay_seconds: 0.25
 iyingdi_stale_days: 45
+netease_dashen_data_url: "https://lushi-app.gameyw.netease.com/gzdata/lushicarddata.json"
+netease_dashen_source_name: "网易大神套牌广场"
+netease_dashen_source_homepage: "https://act.ds.163.com/8fba8a12d9708e3c/"
+netease_dashen_source_provenance: "网易大神公开社区套牌数据，非赛事成绩或官方环境统计"
 
 sources:
   - id: "lvge-violet-prison"

@@ -2,13 +2,14 @@
 
 [简体中文](README.md)
 
-A local AI skill for real-time Hearthstone deck discovery. It searches maintained Bilibili creator collections, structured IYingDi tournament lineups, constructed deck rankings, official ladder rankings, Arena statistics, and Battlegrounds compositions.
+A local AI skill for real-time Hearthstone deck discovery. It searches the public NetEase Dashen deck square, maintained Bilibili creator collections, structured IYingDi tournament lineups, constructed deck rankings, official ladder rankings, Arena statistics, and Battlegrounds compositions.
 
 It runs entirely on the user's machine. No hosted workflow, background service, database, or local result cache is required.
 
 ## Features
 
 - Search maintained Bilibili collections and single videos by creator alias or deck keyword.
+- Search NetEase Dashen's public deck square by title, archetype, class, format, and date.
 - Dispatch `single_video` and `video_collection` sources explicitly.
 - Expand collection pages and inspect recent video titles and descriptions in real time.
 - Extract and structurally validate complete Hearthstone deck codes while preserving names already present in video descriptions.
@@ -21,6 +22,8 @@ It runs entirely on the user's machine. No hosted workflow, background service, 
 - Search Battlegrounds composition tiers and optional strategy details.
 - Use a finite request budget, paced sequential scans, and early stopping to reduce Bilibili risk-control triggers.
 - Retry transient failures and stop further requests immediately when Bilibili risk control is detected.
+- Continue through NetEase Dashen, Bilibili, IYingDi, and constructed rankings when a general deck search returns no result or a source fails.
+- Query every selected source for explicit cross-source research while preserving source semantics and warnings.
 - Warn when a data source appears stale.
 - Never cache fetched results.
 
@@ -88,6 +91,8 @@ Show Tier 1 Battlegrounds compositions.
 Show recent IYingDi tournament deck lists.
 What decks appeared in the Changsha Gold tournament top eight?
 Which decks did a player use in the Summer qualifier?
+Find Control Priest on NetEase Dashen.
+Research recent Control Priest decks across every source.
 ```
 
 The AI should render every valid deck as a separate fenced code block:
@@ -104,6 +109,24 @@ Compatible interfaces display a copy button in the upper-right corner of each bl
 ## Direct script usage
 
 Run commands from the repository root.
+
+Search the public NetEase Dashen deck square:
+
+```bash
+python scripts/search_netease_dashen.py --keyword "控制牧" --mode standard --days 30 --limit 10 --format markdown
+```
+
+Continue after an empty result or source failure:
+
+```bash
+python scripts/search_decks.py --keyword "控制牧" --days 30 --limit 10 --format markdown
+```
+
+Research every selected source:
+
+```bash
+python scripts/search_decks.py --keyword "控制牧" --strategy all --sources netease,bilibili,iyingdi,rankings --format markdown
+```
 
 Search a configured Bilibili creator:
 
@@ -211,6 +234,7 @@ Use this structure for one video:
 
 ## Sources and methodology
 
+- NetEase Dashen: real-time read of the public deck-square JSON used by its Hearthstone tool; the login-bound personal-deck route is not accessed.
 - Bilibili: user-triggered reads of public video and UGC Season metadata without downloading videos or using account cookies.
 - IYingDi tournaments: public structured event and lineup endpoints with an empty token and no account cookie; event, player, and deck names come from source fields.
 - Constructed, Arena, and Battlegrounds statistics: a third-party community source, not Blizzard.
@@ -222,6 +246,7 @@ See [`references/data-sources.md`](references/data-sources.md) for details.
 
 ## Data semantics
 
+- NetEase Dashen results are public community deck records, not tournament results, official rankings, or controlled environment samples.
 - Bilibili results indicate that a creator recently played or showcased a deck.
 - Video views are not Hearthstone game samples.
 - IYingDi tournament lineups are event-and-player records, not environment win-rate statistics; page views are not match samples.
@@ -236,6 +261,7 @@ See [`references/data-sources.md`](references/data-sources.md) for details.
 
 - The skill sends real-time requests only when invoked.
 - It does not create a local result cache.
+- It does not mirror the NetEase Dashen deck square; it returns only records needed for the active query.
 - It does not download or host Bilibili videos.
 - It does not mirror IYingDi tournament lineups; it returns only records needed for the active query.
 - It does not require a user account or collect user credentials.
@@ -260,18 +286,23 @@ hearthstone-deck-search/
 ├── references/
 │   ├── output-schema.md
 │   ├── data-sources.md
+│   ├── routing.md
 │   └── sources.yaml
 ├── scripts/
     ├── deckstrings.py
     ├── format_decks.py
+    ├── search_decks.py
     ├── search_bilibili.py
     ├── search_iyingdi.py
+    ├── search_netease_dashen.py
     └── search_rankings.py
 └── tests/
     ├── test_bilibili.py
     ├── test_deckstrings.py
     ├── test_formatters.py
     ├── test_iyingdi.py
+    ├── test_netease_dashen.py
+    ├── test_search_decks.py
     └── test_rankings.py
 ```
 
@@ -282,10 +313,10 @@ python -m compileall -q scripts tests
 python -m unittest discover -s tests -v
 ```
 
-GitHub Actions runs the offline suite on Python 3.10 and 3.13. CI does not batch-query Bilibili or IYingDi.
+GitHub Actions runs the offline suite on Python 3.10 and 3.13. CI does not batch-query NetEase Dashen, Bilibili, or IYingDi.
 
 ## Disclaimer
 
-This is an unofficial community project and is not affiliated with, endorsed by, or sponsored by Blizzard Entertainment, Bilibili, or IYingDi. Hearthstone and Blizzard are trademarks or registered trademarks of Blizzard Entertainment, Inc. Bilibili and IYingDi are trademarks of their respective owners. Public endpoint behavior and third-party data availability may change without notice.
+This is an unofficial community project and is not affiliated with, endorsed by, or sponsored by Blizzard Entertainment, NetEase Dashen, Bilibili, or IYingDi. Hearthstone and Blizzard are trademarks or registered trademarks of Blizzard Entertainment, Inc. NetEase Dashen, Bilibili, and IYingDi are trademarks of their respective owners. Public endpoint behavior and third-party data availability may change without notice.
 
 The project code is available under the [MIT License](LICENSE). That license does not grant rights to third-party videos, titles, descriptions, trademarks, or data.

@@ -41,6 +41,19 @@ This is a Markdown fenced code block. Compatible UIs show a copy button in its u
 
 For Bilibili results, copy the `deck_name_hint` into the `###` line without translating, shortening, normalizing, or replacing it. If no hint exists, use `未命名卡组`; never infer a name from the title or model knowledge.
 
+## NetEase Dashen route
+
+`netease_dashen_decks` returns:
+
+- `deck_name`: deterministic display name selected from a meaningful source title or structured archetype.
+- `deck_name_source`: `netease_title`, `netease_archetype`, or `fallback_unnamed`.
+- `archetype_name`, `class`, `class_zh`, and `format`: source metadata.
+- `published_at`, `dust`, `winrate`, and `popularity`: source metrics; placeholder win rate is represented as `null`.
+- `record_id`: source record identity used with the deck code for deduplication.
+- `deck_code` and `deck_code_valid`: complete code and full Deckstring validation.
+
+`multi_source_deck_search` returns an `attempts` array. Each entry keeps the child source `payload`, status, and result count so source failures and zero-match results remain distinguishable.
+
 ## IYingDi tournament routes
 
 - `iyingdi_events`: `events` contains matching event metadata without requesting every deck.

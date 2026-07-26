@@ -109,6 +109,27 @@ def collect_decks(payload: dict[str, Any]) -> list[dict[str, Any]]:
                     ),
                 }
             )
+        elif route == "netease_dashen_decks":
+            code = item.get("deck_code")
+            if not code or not item.get("deck_code_valid", False) or not validate_deck_code(str(code)):
+                continue
+            details = [
+                f"职业：{safe_text(item.get('class_zh'))}" if item.get("class_zh") else None,
+                f"模式：{safe_text(item.get('format'))}" if item.get("format") else None,
+                f"日期：{safe_text(item.get('published_at'))[:10]}"
+                if item.get("published_at")
+                else None,
+                f"造价：{item.get('dust')} 尘" if item.get("dust") is not None else None,
+                f"胜率：{item.get('winrate')}%" if item.get("winrate") is not None else None,
+            ]
+            decks.append(
+                {
+                    "name": clean_name(item.get("deck_name")),
+                    "code": str(code),
+                    "summary": "；".join(part for part in details if part),
+                    "evidence": [payload.get("source_url")] if payload.get("source_url") else [],
+                }
+            )
         else:
             code = item.get("deck_code")
             if not code or not item.get("deck_code_valid", False) or not validate_deck_code(str(code)):
@@ -274,6 +295,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "bilibili_decks",
         "deck_rankings",
         "iyingdi_tournament_decks",
+        "netease_dashen_decks",
         None,
     }:
         return render_decks(payload)

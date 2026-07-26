@@ -1,11 +1,11 @@
 ---
 name: hearthstone-deck-search
-description: Real-time Hearthstone deck discovery from maintained Bilibili creator collections, IYingDi tournament collections, and structured ranking sources. Use when users ask which decks a configured streamer has played, ask to search Bilibili for a deck or creator, request recent video deck codes, ask for tournament, event, player, or IYingDi deck lists, or ask for deck, arena, Battlegrounds, or official player rankings.
+description: Real-time Hearthstone deck discovery from NetEase Dashen's public deck square, maintained Bilibili creator collections, IYingDi tournament collections, and structured ranking sources. Use when users ask for a deck or archetype code, which decks a configured streamer has played, Bilibili or NetEase Dashen decks, recent video deck codes, tournament or player event lists, cross-source deck research, constructed meta rankings, official ladder rankings, Arena statistics, or Battlegrounds compositions.
 ---
 
 # Hearthstone Deck Search
 
-Route the request before fetching data. Never ask the user for a Bilibili URL; use the maintained source registry.
+Route the request before fetching data. Never ask the user for a Bilibili URL; use the maintained source registry. Read `references/routing.md` when a request is ambiguous, mixed, or requires fallback across sources.
 
 ## Mandatory copyable output
 
@@ -33,11 +33,47 @@ Follow these rules exactly:
 
 ## Route requests
 
+- Explicit platform or source wording is a hard route constraint. Do not silently replace it with another source.
+- For requests that explicitly say “网易大神” or “大神套牌广场”, run `scripts/search_netease_dashen.py`.
 - For Bilibili, video, streamer, or configured creator requests, run `scripts/search_bilibili.py`.
 - For tournaments, events, competition lineups, player tournament decks, or IYingDi requests, run `scripts/search_iyingdi.py`.
-- For deck/environment rankings, use statistical deck sources. Do not treat Bilibili views as game samples.
+- For deck/environment rankings, use statistical deck sources. Do not treat NetEase community records, Bilibili views, or IYingDi page views as game samples.
 - For official ladder/player rankings, use official ranking sources. Do not claim that player rankings contain deck codes.
-- For mixed questions, fetch each relevant source independently and label every claim with its source type.
+- For an unqualified deck-name search, run `scripts/search_decks.py --strategy fallback`; it continues after an empty result or source failure.
+- For “全面查、多个来源、交叉验证、都找一下”, run `scripts/search_decks.py --strategy all`.
+- For mixed questions, fetch each semantically relevant source independently and label every claim with its source type.
+
+Do not say “没有找到” after only one failed or empty general-purpose source. Follow the bounded continuation rules in `references/routing.md`, preserve every source warning, and distinguish “source failed” from “source returned zero matches.”
+
+## Search continuously across sources
+
+Use the deterministic multi-source dispatcher for general deck discovery:
+
+```bash
+python scripts/search_decks.py --keyword "控制牧" --days 30 --limit 10 --format markdown
+python scripts/search_decks.py --keyword "控制牧" --mode standard --strategy all --format markdown
+python scripts/search_decks.py --keyword "宇宙法" --sources netease,bilibili,iyingdi,rankings --format json
+```
+
+`fallback` searches in the configured order and stops at the first source with results. `all` queries every selected source. Each child source retains its own route, provenance, warnings, and semantics.
+
+For a creator-specific query, stay on Bilibili and broaden only its date window. For a tournament-specific query, stay on IYingDi and broaden only its event/date filters. Never answer a creator or tournament claim with an unrelated community deck merely because its name matches.
+
+## Search NetEase Dashen deck square
+
+Run:
+
+```bash
+python scripts/search_netease_dashen.py --keyword "控制牧" --days 30 --limit 10 --format markdown
+python scripts/search_netease_dashen.py --keyword "宇宙法" --class "法师" --mode standard --format json
+python scripts/search_netease_dashen.py --class "牧师" --sort winrate --limit 5 --format markdown
+```
+
+The script reads the public deck-square JSON in real time, retries transient failures, validates every Deckstring, and creates no persistent cache.
+
+Preserve `deck_name` and `deck_name_source`. Prefer a meaningful source `title`; when it is generic, use the structured archetype field; otherwise use `未命名卡组`. Never ask the model to invent or embellish the name.
+
+Treat this source as a public community deck corpus. It is not tournament evidence, an official ladder ranking, or a statistically controlled environment sample. Omit placeholder win-rate values and surface warnings when popularity or win-rate ordering is not meaningful.
 
 ## Search configured Bilibili collections
 
@@ -119,6 +155,7 @@ Always surface every `warnings` entry. If a ranking source reports stale records
 - Treat `deck_code_valid` as structural validation, not proof that the deck is legal in the current patch.
 - Treat a non-empty `deck_name_hint` as the authoritative name copied from the video description. Preserve it exactly; do not translate, shorten, normalize, embellish, or replace it with an archetype inferred from the title or card knowledge.
 - Treat IYingDi `deck_name` as an authoritative structured source field. Preserve it exactly and keep the player and event beside the code block.
+- Treat NetEase Dashen `deck_name` as a deterministic source-derived field. Preserve it exactly and report whether it came from `netease_title`, `netease_archetype`, or the unnamed fallback.
 - If `deck_name_hint` is empty, use `未命名卡组`. Do not invent a name from the video title, gameplay, class, cards, or model knowledge.
 - For user-facing Bilibili deck results, prefer `scripts/search_bilibili.py ... --format markdown` and reproduce its fenced deck blocks verbatim. Never manually rewrite the `###` name line.
 - State the video date, streamer, uploader, collection, and video URL.
@@ -130,6 +167,7 @@ Always surface every `warnings` entry. If a ranking source reports stale records
 ## Preserve source meanings
 
 - Bilibili means recent creator gameplay or showcased builds.
+- NetEase Dashen means public community-submitted or collected decks, not verified tournament or ladder evidence.
 - IYingDi tournament collections mean submitted or curated event lineups grouped by event and player; page views are not match samples.
 - Deck rankings mean archetype statistics and representative builds.
 - Official rankings mean players and ladder positions.
