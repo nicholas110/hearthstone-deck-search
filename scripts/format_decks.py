@@ -79,6 +79,36 @@ def collect_decks(payload: dict[str, Any]) -> list[dict[str, Any]]:
                     "evidence": [payload.get("source_url")] if payload.get("source_url") else [],
                 }
             )
+        elif route == "iyingdi_tournament_decks":
+            code = item.get("deck_code")
+            if not code or not validate_deck_code(str(code)):
+                continue
+            details = [
+                f"赛事：{safe_text(item.get('event_name'))}" if item.get("event_name") else None,
+                f"选手：{safe_text(item.get('player'))}" if item.get("player") else None,
+                f"职业：{safe_text(item.get('class_zh'))}" if item.get("class_zh") else None,
+                f"模式：{safe_text(item.get('format'))}" if item.get("format") else None,
+                f"日期：{safe_text(item.get('event_begin'))}" if item.get("event_begin") else None,
+                f"造价：{item.get('dust')} 尘" if item.get("dust") is not None else None,
+            ]
+            evidence = [
+                url
+                for url in [item.get("event_url"), item.get("deck_url")]
+                if url
+            ]
+            decks.append(
+                {
+                    "name": clean_name(item.get("deck_name")),
+                    "code": str(code),
+                    "summary": "；".join(part for part in details if part),
+                    "evidence": evidence,
+                    "_identity": (
+                        str(code),
+                        safe_text(item.get("player")),
+                        safe_text(item.get("event_id")),
+                    ),
+                }
+            )
         else:
             code = item.get("deck_code")
             if not code or not item.get("deck_code_valid", False) or not validate_deck_code(str(code)):
@@ -100,15 +130,17 @@ def collect_decks(payload: dict[str, Any]) -> list[dict[str, Any]]:
             )
 
     deduped: list[dict[str, Any]] = []
-    by_code: dict[str, dict[str, Any]] = {}
+    by_identity: dict[Any, dict[str, Any]] = {}
     for deck in decks:
-        existing = by_code.get(deck["code"])
+        identity = deck.get("_identity", deck["code"])
+        existing = by_identity.get(identity)
         if existing:
             for url in deck["evidence"]:
                 if url not in existing["evidence"]:
                     existing["evidence"].append(url)
             continue
-        by_code[deck["code"]] = deck
+        by_identity[identity] = deck
+        deck.pop("_identity", None)
         deduped.append(deck)
     return deduped
 
@@ -211,10 +243,42 @@ def render_battlegrounds(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_iyingdi_events(payload: dict[str, Any]) -> str:
+    lines = [
+        "旅法师营地赛事专题",
+        "",
+        "| 日期 | 赛事 | 模式 | 卡组数 |",
+        "| --- | --- | --- | ---: |",
+    ]
+    for item in payload.get("events") or []:
+        name = table_cell(item.get("event_name"))
+        url = safe_text(item.get("event_url"))
+        if url:
+            name = f"[{name}]({url})"
+        lines.append(
+            "| {begin} | {name} | {format} | {count} |".format(
+                begin=table_cell(item.get("begin")),
+                name=name,
+                format=table_cell(item.get("format")),
+                count=table_cell(item.get("deck_count")),
+            )
+        )
+    append_source(lines, payload)
+    append_warnings(lines, payload)
+    return "\n".join(lines)
+
+
 def render_markdown(payload: dict[str, Any]) -> str:
     route = payload.get("route")
-    if route in {"bilibili_decks", "deck_rankings", None}:
+    if route in {
+        "bilibili_decks",
+        "deck_rankings",
+        "iyingdi_tournament_decks",
+        None,
+    }:
         return render_decks(payload)
+    if route == "iyingdi_events":
+        return render_iyingdi_events(payload)
     if route == "official_player_rankings":
         return render_official(payload)
     if route == "arena_class_rankings":

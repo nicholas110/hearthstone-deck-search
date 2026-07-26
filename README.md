@@ -2,7 +2,7 @@
 
 [English](README.en.md)
 
-一个完全本地运行的炉石传说卡组检索 Skill。它可以从维护好的 B站博主视频合集里实时查找卡组，提取卡组名称和完整代码，也可以查询构筑卡组环境排行、国服官方玩家排行榜、竞技场数据以及酒馆战棋流派。
+一个完全本地运行的炉石传说卡组检索 Skill。它可以从维护好的 B站博主视频合集里实时查找卡组，从旅法师营地结构化赛事专题查询比赛牌表，也可以查询构筑卡组环境排行、国服官方玩家排行榜、竞技场数据以及酒馆战棋流派。
 
 项目不依赖云端工作流、常驻服务器、数据库或本地结果缓存，所有操作均由用户自己的 AI 客户端在本机按需执行。
 
@@ -12,6 +12,8 @@
 - 明确区分 `single_video` 与 `video_collection` 数据源。
 - 实时展开合集分页，读取近期视频标题和简介。
 - 提取并结构化校验完整炉石卡组代码，原样保留简介中已有的卡组名称。
+- 查询旅法师营地近期赛事、参赛选手和结构化比赛牌表。
+- 按赛事、选手、职业、模式或卡组关键词筛选赛事构筑。
 - 每套卡组单独输出一个带复制按钮的 Markdown 代码块。
 - 查询标准和狂野模式的卡组原型排行及代表构筑。
 - 查询炉石国服官方玩家排行榜。
@@ -83,6 +85,9 @@ git -C ~/.codex/skills/hearthstone-deck-search pull --ff-only
 国服标准天梯前十名是谁？
 竞技场哪个职业胜率最高？
 酒馆战棋一线流派有哪些？
+最近旅法师营地有什么赛事卡组？
+黄金赛长沙站八强用了哪些卡组？
+夏季预选赛里九千羽用了什么牌表？
 ```
 
 只要结果中存在有效代码，AI 就必须为每套卡组输出独立的可复制代码块：
@@ -116,6 +121,21 @@ python scripts/search_bilibili.py --keyword "偷牌牧" --days 30 --limit 10 --f
 
 ```bash
 python scripts/search_bilibili.py --source "one-video-source" --days 0 --format markdown
+```
+
+列出旅法师营地近期赛事专题：
+
+```bash
+python scripts/search_iyingdi.py --list-events --days 30 --format markdown
+```
+
+查询指定赛事、选手或职业：
+
+```bash
+python scripts/search_iyingdi.py --event "黄金赛长沙站" --limit 10 --format markdown
+python scripts/search_iyingdi.py --event "夏季预选赛" --player "九千羽" --format markdown
+python scripts/search_iyingdi.py --event "夏季预选赛" --class "牧师" --mode standard --format markdown
+python scripts/search_iyingdi.py --keyword "控制牧" --days 30 --limit 10 --format markdown
 ```
 
 查询构筑卡组环境排行：
@@ -192,6 +212,7 @@ python scripts/search_rankings.py battlegrounds --tier 1 --details --limit 5
 ## 数据源与统计方法
 
 - B站：用户主动查询时读取公开的视频及 UGC Season 元数据，不下载视频、不使用账号 Cookie。
+- 旅法师营地赛事：读取公开套牌专题与赛事牌表接口，空 token、无账号 Cookie；卡组名称、选手和赛事均使用结构化原始字段。
 - 构筑、竞技场和战棋：第三方社区统计来源，非暴雪官方数据。
 - 国服玩家榜：炉石传说国服官方排行榜，只包含玩家和名次。
 - 环境综合排序会过滤低于 `ranking_min_games` 的小样本，并在结果中返回具体评分公式。
@@ -203,6 +224,8 @@ python scripts/search_rankings.py battlegrounds --tier 1 --details --limit 5
 
 - B站结果只能说明某位博主近期玩过或展示过该卡组。
 - 视频播放量不能当作炉石对局样本量。
+- 旅法师营地赛事牌表表示某赛事下按选手整理的构筑，不代表环境胜率；页面浏览量也不是比赛场次。
+- 同一代码由不同选手或在不同赛事使用时会保留为独立记录。
 - 卡组原型统计与具体代表构筑是两类不同数据。
 - 官方天梯排行榜只有玩家名称和名次，不包含卡组代码。
 - 竞技场和酒馆战棋数据不能描述成构筑卡组排行。
@@ -214,11 +237,12 @@ python scripts/search_rankings.py battlegrounds --tier 1 --details --limit 5
 - 只有用户发起查询时才会实时访问数据源。
 - 不创建本地查询结果缓存。
 - 不下载、托管或重新分发 B站视频。
+- 不建立旅法师营地赛事牌表镜像，只在用户查询时返回所需记录。
 - 不要求用户登录，也不收集用户账号或凭据。
 
 ## 版权与数据源下架请求
 
-本项目仅为检索和研究目的索引已配置的公开数据源，不托管或重新分发相关视频。
+本项目仅为检索和研究目的访问公开数据源，不托管或重新分发相关视频，也不建立第三方赛事牌表镜像。
 
 如果你是相关内容的权利人，并认为某个已配置数据源涉及侵权，请通过 [GitHub Issues](https://github.com/nicholas110/hearthstone-deck-search/issues) 联系作者，并提供对应数据源、链接和请求理由。核实后，维护者会删除或停用相应数据源。
 
@@ -241,11 +265,13 @@ hearthstone-deck-search/
     ├── deckstrings.py
     ├── format_decks.py
     ├── search_bilibili.py
+    ├── search_iyingdi.py
     └── search_rankings.py
 └── tests/
     ├── test_bilibili.py
     ├── test_deckstrings.py
     ├── test_formatters.py
+    ├── test_iyingdi.py
     └── test_rankings.py
 ```
 
@@ -256,10 +282,10 @@ python -m compileall -q scripts tests
 python -m unittest discover -s tests -v
 ```
 
-GitHub Actions 会在 Python 3.10 和 3.13 上运行全部离线测试，不在 CI 中批量访问 B站。
+GitHub Actions 会在 Python 3.10 和 3.13 上运行全部离线测试，不在 CI 中批量访问 B站或旅法师营地。
 
 ## 免责声明
 
-本项目是非官方社区项目，与暴雪娱乐及哔哩哔哩不存在隶属、授权、认可或赞助关系。Hearthstone、炉石传说及 Blizzard 为暴雪娱乐公司相关商标；哔哩哔哩及 Bilibili 为其权利人相关商标。公开接口行为和第三方数据可用性可能随时发生变化。
+本项目是非官方社区项目，与暴雪娱乐、哔哩哔哩及旅法师营地不存在隶属、授权、认可或赞助关系。Hearthstone、炉石传说及 Blizzard 为暴雪娱乐公司相关商标；哔哩哔哩、Bilibili 及旅法师营地为其权利人相关商标。公开接口行为和第三方数据可用性可能随时发生变化。
 
 项目代码采用 [MIT License](LICENSE)。该许可证仅适用于本仓库代码，不授予任何第三方视频、标题、简介、商标或数据内容的权利。

@@ -1,4 +1,4 @@
-version: 2
+version: 3
 request_timeout_seconds: 15
 retry_max_attempts: 4
 retry_backoff_seconds: [1, 2, 4]
@@ -16,6 +16,14 @@ deck_source_provenance: "第三方社区统计服务，非暴雪官方数据源"
 official_rank_api_base: "https://webapi.blizzard.cn/hs-rank-api-server/api"
 official_source_name: "炉石传说国服官方排行榜"
 official_source_homepage: "https://hs.blizzard.cn/"
+iyingdi_api_base: "https://api2.iyingdi.com"
+iyingdi_source_name: "旅法师营地赛事专题"
+iyingdi_source_homepage: "https://www.iyingdi.com/web/tools/hearthstone/decks"
+iyingdi_source_provenance: "旅法师营地公开套牌专题，非暴雪官方数据源"
+iyingdi_event_page_size: 20
+iyingdi_max_api_requests: 8
+iyingdi_request_delay_seconds: 0.25
+iyingdi_stale_days: 45
 
 sources:
   - id: "lvge-violet-prison"

@@ -1,6 +1,6 @@
 ---
 name: hearthstone-deck-search
-description: Real-time Hearthstone deck discovery from maintained Bilibili creator collections and structured ranking sources. Use when users ask which decks a configured streamer has played, ask to search Bilibili for a deck or creator, request recent video deck codes, or ask for deck, arena, Battlegrounds, or official player rankings.
+description: Real-time Hearthstone deck discovery from maintained Bilibili creator collections, IYingDi tournament collections, and structured ranking sources. Use when users ask which decks a configured streamer has played, ask to search Bilibili for a deck or creator, request recent video deck codes, ask for tournament, event, player, or IYingDi deck lists, or ask for deck, arena, Battlegrounds, or official player rankings.
 ---
 
 # Hearthstone Deck Search
@@ -26,14 +26,15 @@ Follow these rules exactly:
 - Do not add a space between `###` and the deck name.
 - Use one block per deck; never combine multiple decks into one block.
 - Keep commentary, date, win rate, source, and video link outside the block.
-- Deduplicate identical deck codes before responding.
-- Prefer `deck_name_hint` or `representative_deck.zh_name`. For Bilibili, use `未命名卡组` when the description provides no name; never derive one from the title.
+- Deduplicate identical deck codes before responding, except that IYingDi tournament entries from different players or events remain separate evidence records.
+- Prefer `deck_name_hint`, `deck_name`, or `representative_deck.zh_name`. For Bilibili, use `未命名卡组` when the description provides no name; never derive one from the title.
 - Omit a code block only when no valid code exists. Explain that limitation directly.
 - A table may summarize results, but it never replaces the required copyable blocks.
 
 ## Route requests
 
 - For Bilibili, video, streamer, or configured creator requests, run `scripts/search_bilibili.py`.
+- For tournaments, events, competition lineups, player tournament decks, or IYingDi requests, run `scripts/search_iyingdi.py`.
 - For deck/environment rankings, use statistical deck sources. Do not treat Bilibili views as game samples.
 - For official ladder/player rankings, use official ranking sources. Do not claim that player rankings contain deck codes.
 - For mixed questions, fetch each relevant source independently and label every claim with its source type.
@@ -69,6 +70,25 @@ If a source configured as `video_collection` resolves to a standalone video, rep
 
 Treat request-budget exhaustion and Bilibili `-352` or HTTP `412` responses as partial source failures. Do not bypass risk control or ask the user for account cookies.
 
+## Search IYingDi tournaments
+
+Use the structured tournament collections instead of extracting deck names from tournament articles:
+
+```bash
+python scripts/search_iyingdi.py --list-events --days 30 --format markdown
+python scripts/search_iyingdi.py --event "黄金赛长沙站" --limit 10 --format markdown
+python scripts/search_iyingdi.py --event "夏季预选赛" --player "九千羽" --format markdown
+python scripts/search_iyingdi.py --event "夏季预选赛" --class "牧师" --mode standard --format markdown
+python scripts/search_iyingdi.py --keyword "控制牧" --days 30 --limit 10 --format markdown
+python scripts/search_iyingdi.py --event-id 1647084 --limit 10 --format markdown
+```
+
+Interpret “赛事卡组、比赛牌表、黄金赛、预选赛、季后赛、某选手比赛卡组、旅法师营地赛事” as this route.
+
+The script reads public collection and deck-detail endpoints with the same browser request headers used by the public page. It sends an empty token, never uses account cookies, enforces a finite request budget, paces requests, retries transient failures, and creates no persistent cache.
+
+Preserve the structured `deck_name`, `player`, `event_name`, `class_zh`, and `format` fields. Do not ask the model to rename a deck. Do not collapse the same code across different players or events; the player-event combination is meaningful tournament evidence. Treat `pageviews` only as IYingDi page views, never as games, wins, or popularity samples.
+
 ## Search rankings
 
 Run only the route needed by the request:
@@ -98,6 +118,7 @@ Always surface every `warnings` entry. If a ranking source reports stale records
 
 - Treat `deck_code_valid` as structural validation, not proof that the deck is legal in the current patch.
 - Treat a non-empty `deck_name_hint` as the authoritative name copied from the video description. Preserve it exactly; do not translate, shorten, normalize, embellish, or replace it with an archetype inferred from the title or card knowledge.
+- Treat IYingDi `deck_name` as an authoritative structured source field. Preserve it exactly and keep the player and event beside the code block.
 - If `deck_name_hint` is empty, use `未命名卡组`. Do not invent a name from the video title, gameplay, class, cards, or model knowledge.
 - For user-facing Bilibili deck results, prefer `scripts/search_bilibili.py ... --format markdown` and reproduce its fenced deck blocks verbatim. Never manually rewrite the `###` name line.
 - State the video date, streamer, uploader, collection, and video URL.
@@ -109,6 +130,7 @@ Always surface every `warnings` entry. If a ranking source reports stale records
 ## Preserve source meanings
 
 - Bilibili means recent creator gameplay or showcased builds.
+- IYingDi tournament collections mean submitted or curated event lineups grouped by event and player; page views are not match samples.
 - Deck rankings mean archetype statistics and representative builds.
 - Official rankings mean players and ladder positions.
 - Arena and Battlegrounds statistics are not constructed-deck rankings.

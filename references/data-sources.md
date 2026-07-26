@@ -13,6 +13,20 @@ Each source in `sources.yaml` must declare `kind` as either:
 - `video_collection`: resolve a UGC season. Prefer a verified `seed_bvid` from that season.
 - `single_video`: inspect only the configured BV video.
 
+## IYingDi tournament collections
+
+- Purpose: search structured Hearthstone tournament, qualifier, playoff, and event lineups.
+- Access: user-triggered reads of the public set list and set deck endpoints used by the public IYingDi deck page.
+- Authentication: empty token; no account cookie or credential.
+- Storage: no persistent result cache.
+- Request controls: browser-compatible public-page headers, finite request budget, pacing, pagination, and transient retry.
+- Meaning: each record belongs to an event and player. It is not an environment win-rate statistic.
+- Validation: exclude every code that fails full Deckstring parsing.
+- Deduplication: use deck code, player, and event together; the same code used by different players remains separate evidence.
+- Freshness: compare the newest matching event date with `iyingdi_stale_days`.
+
+The endpoints are not formally versioned public API documentation and may change. Surface failures instead of bypassing access controls or requesting user credentials.
+
 ## Community deck statistics
 
 - Display name: `deck_source_name` in `sources.yaml`.

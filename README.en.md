@@ -2,7 +2,7 @@
 
 [简体中文](README.md)
 
-A local AI skill for real-time Hearthstone deck discovery. It searches a maintained registry of Bilibili creator collections, extracts deck names and complete deck codes from public video metadata, and queries structured sources for constructed deck rankings, official ladder rankings, Arena statistics, and Battlegrounds compositions.
+A local AI skill for real-time Hearthstone deck discovery. It searches maintained Bilibili creator collections, structured IYingDi tournament lineups, constructed deck rankings, official ladder rankings, Arena statistics, and Battlegrounds compositions.
 
 It runs entirely on the user's machine. No hosted workflow, background service, database, or local result cache is required.
 
@@ -12,6 +12,8 @@ It runs entirely on the user's machine. No hosted workflow, background service, 
 - Dispatch `single_video` and `video_collection` sources explicitly.
 - Expand collection pages and inspect recent video titles and descriptions in real time.
 - Extract and structurally validate complete Hearthstone deck codes while preserving names already present in video descriptions.
+- Search recent IYingDi events and structured tournament lineups.
+- Filter tournament decks by event, player, class, format, or deck keyword.
 - Return one copyable Markdown code block per deck.
 - Search Standard and Wild archetype rankings with representative deck builds.
 - Search official Chinese Hearthstone player rankings.
@@ -83,6 +85,9 @@ Show me the top five Standard deck archetypes.
 Who are the top ten players on the official Standard ladder?
 Rank Arena classes by win rate.
 Show Tier 1 Battlegrounds compositions.
+Show recent IYingDi tournament deck lists.
+What decks appeared in the Changsha Gold tournament top eight?
+Which decks did a player use in the Summer qualifier?
 ```
 
 The AI should render every valid deck as a separate fenced code block:
@@ -116,6 +121,21 @@ Search a configured single-video source:
 
 ```bash
 python scripts/search_bilibili.py --source "one-video-source" --days 0 --format markdown
+```
+
+List recent IYingDi tournament collections:
+
+```bash
+python scripts/search_iyingdi.py --list-events --days 30 --format markdown
+```
+
+Search by event, player, class, or deck keyword:
+
+```bash
+python scripts/search_iyingdi.py --event "黄金赛长沙站" --limit 10 --format markdown
+python scripts/search_iyingdi.py --event "夏季预选赛" --player "九千羽" --format markdown
+python scripts/search_iyingdi.py --event "夏季预选赛" --class "牧师" --mode standard --format markdown
+python scripts/search_iyingdi.py --keyword "控制牧" --days 30 --limit 10 --format markdown
 ```
 
 Search constructed deck rankings:
@@ -192,6 +212,7 @@ Use this structure for one video:
 ## Sources and methodology
 
 - Bilibili: user-triggered reads of public video and UGC Season metadata without downloading videos or using account cookies.
+- IYingDi tournaments: public structured event and lineup endpoints with an empty token and no account cookie; event, player, and deck names come from source fields.
 - Constructed, Arena, and Battlegrounds statistics: a third-party community source, not Blizzard.
 - Chinese player ladder: the official Chinese Hearthstone leaderboard, containing players and positions only.
 - Composite archetype ranking filters samples below `ranking_min_games` and returns the exact score formula in its output.
@@ -203,6 +224,8 @@ See [`references/data-sources.md`](references/data-sources.md) for details.
 
 - Bilibili results indicate that a creator recently played or showcased a deck.
 - Video views are not Hearthstone game samples.
+- IYingDi tournament lineups are event-and-player records, not environment win-rate statistics; page views are not match samples.
+- Identical codes used by different players or in different events remain separate records.
 - Archetype statistics and representative deck builds are separate records.
 - Official ladder rankings contain player positions, not deck codes.
 - Arena and Battlegrounds data must not be described as constructed-deck rankings.
@@ -214,11 +237,12 @@ See [`references/data-sources.md`](references/data-sources.md) for details.
 - The skill sends real-time requests only when invoked.
 - It does not create a local result cache.
 - It does not download or host Bilibili videos.
+- It does not mirror IYingDi tournament lineups; it returns only records needed for the active query.
 - It does not require a user account or collect user credentials.
 
 ## Copyright and takedown requests
 
-This project indexes configured public data sources for search and research purposes. It does not host or redistribute the referenced videos.
+This project accesses public data sources for search and research purposes. It does not host or redistribute referenced videos or create a mirror of third-party tournament lineups.
 
 If you are a rights holder and believe that a configured source infringes your rights, please [open a GitHub issue](https://github.com/nicholas110/hearthstone-deck-search/issues) and identify the relevant source, URL, and basis for the request. After verification, the maintainer will remove or disable the corresponding data source.
 
@@ -241,11 +265,13 @@ hearthstone-deck-search/
     ├── deckstrings.py
     ├── format_decks.py
     ├── search_bilibili.py
+    ├── search_iyingdi.py
     └── search_rankings.py
 └── tests/
     ├── test_bilibili.py
     ├── test_deckstrings.py
     ├── test_formatters.py
+    ├── test_iyingdi.py
     └── test_rankings.py
 ```
 
@@ -256,10 +282,10 @@ python -m compileall -q scripts tests
 python -m unittest discover -s tests -v
 ```
 
-GitHub Actions runs the offline suite on Python 3.10 and 3.13. CI does not batch-query Bilibili.
+GitHub Actions runs the offline suite on Python 3.10 and 3.13. CI does not batch-query Bilibili or IYingDi.
 
 ## Disclaimer
 
-This is an unofficial community project and is not affiliated with, endorsed by, or sponsored by Blizzard Entertainment or Bilibili. Hearthstone and Blizzard are trademarks or registered trademarks of Blizzard Entertainment, Inc. Bilibili is a trademark of its respective owner. Public endpoint behavior and third-party data availability may change without notice.
+This is an unofficial community project and is not affiliated with, endorsed by, or sponsored by Blizzard Entertainment, Bilibili, or IYingDi. Hearthstone and Blizzard are trademarks or registered trademarks of Blizzard Entertainment, Inc. Bilibili and IYingDi are trademarks of their respective owners. Public endpoint behavior and third-party data availability may change without notice.
 
 The project code is available under the [MIT License](LICENSE). That license does not grant rights to third-party videos, titles, descriptions, trademarks, or data.

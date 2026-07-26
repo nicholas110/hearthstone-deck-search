@@ -1,4 +1,4 @@
 interface:
   display_name: "炉石卡组检索"
-  short_description: "从B站视频、合集和排行榜来源实时检索炉石卡组数据"
+  short_description: "从B站、旅法师营地赛事和排行榜实时检索炉石卡组"
   default_prompt: "Use $hearthstone-deck-search to find Hearthstone decks, preserve source names, and include every valid deck as its own copyable name-and-code block."

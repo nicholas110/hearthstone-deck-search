@@ -1,6 +1,6 @@
 # Output schema
 
-The Bilibili search script returns one JSON object.
+Each search script returns one JSON object with a route-specific result schema.
 
 ## Top-level fields
 
@@ -40,6 +40,23 @@ AAECAa0GBsugBKiWB/ypB4CqB4SqB4O/BwzwnwSg+wbD/waFhgedrQeFvwebvweixAeyxQevyQew3weW
 This is a Markdown fenced code block. Compatible UIs show a copy button in its upper-right corner. A name table must not replace these blocks.
 
 For Bilibili results, copy the `deck_name_hint` into the `###` line without translating, shortening, normalizing, or replacing it. If no hint exists, use `未命名卡组`; never infer a name from the title or model knowledge.
+
+## IYingDi tournament routes
+
+- `iyingdi_events`: `events` contains matching event metadata without requesting every deck.
+- `iyingdi_tournament_decks`: `results` contains validated structured tournament decks.
+
+Tournament result fields:
+
+- `event_id`, `event_name`, `event_url`, and `event_begin`: event evidence.
+- `deck_id` and `deck_url`: IYingDi deck record.
+- `deck_name`: authoritative structured deck name; preserve it exactly.
+- `deck_name_source`: always `iyingdi_structured_field`.
+- `player`, `class`, `class_zh`, and `format`: structured lineup metadata.
+- `dust` and `pageviews`: crafting cost and IYingDi page views.
+- `deck_code` and `deck_code_valid`: complete code and full Deckstring validation.
+
+Do not treat `pageviews` as games or match samples. Do not collapse identical codes across different players or events.
 
 ## Ranking routes
 

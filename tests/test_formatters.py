@@ -77,6 +77,48 @@ class FormatterTests(unittest.TestCase):
         self.assertIn("法师", arena)
         self.assertIn("机械", battlegrounds)
 
+    def test_iyingdi_tournament_players_are_not_collapsed_by_code(self):
+        base = {
+            "deck_name": "控制牧",
+            "deck_code": STANDARD_CODE,
+            "deck_code_valid": True,
+            "event_id": 123,
+            "event_name": "测试赛事",
+            "event_url": "https://example.test/event",
+            "class_zh": "牧师",
+            "format": "标准",
+        }
+        output = render_markdown(
+            {
+                "route": "iyingdi_tournament_decks",
+                "results": [
+                    {**base, "player": "选手甲", "deck_id": 1},
+                    {**base, "player": "选手乙", "deck_id": 2},
+                ],
+            }
+        )
+        self.assertEqual(output.count("###控制牧"), 2)
+        self.assertIn("选手：选手甲", output)
+        self.assertIn("选手：选手乙", output)
+
+    def test_iyingdi_event_list_markdown(self):
+        output = render_markdown(
+            {
+                "route": "iyingdi_events",
+                "events": [
+                    {
+                        "begin": "2026-07-22",
+                        "event_name": "夏季预选赛",
+                        "event_url": "https://example.test/event",
+                        "format": "标准",
+                        "deck_count": 64,
+                    }
+                ],
+            }
+        )
+        self.assertIn("夏季预选赛", output)
+        self.assertIn("| 2026-07-22 |", output)
+
 
 if __name__ == "__main__":
     unittest.main()
