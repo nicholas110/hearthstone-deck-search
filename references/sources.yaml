@@ -1,0 +1,81 @@
+version: 1
+request_timeout_seconds: 15
+retry_max_attempts: 4
+retry_backoff_seconds: [1, 2, 4]
+default_days: 30
+max_workers: 6
+deck_api_base: "https://udagyciuulrg.sealosgzg.site/api"
+official_rank_api_base: "https://webapi.blizzard.cn/hs-rank-api-server/api"
+
+sources:
+  - id: "lvge-violet-prison"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://www.bilibili.com/video/BV1qH3763EA9/"
+    creator_name: "驴鸽"
+    creator_aliases: ["驴哥", "lvge"]
+    enabled: true
+    tags: ["炉石传说", "直播切片", "紫罗兰监狱"]
+
+  - id: "shen-gun-live-highlights"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://www.bilibili.com/video/BV1Dcg46XErx/"
+    creator_name: "神棍老师"
+    creator_aliases: ["神棍", "神棍老师"]
+    enabled: true
+    tags: ["炉石传说", "直播精选"]
+
+  - id: "yilingshu-live-highlights"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://space.bilibili.com/402158519/lists/6107184?type=season"
+    creator_name: "异灵术"
+    creator_aliases: ["异灵术老师", "异灵术"]
+    enabled: true
+    tags: ["炉石传说", "直播精选"]
+
+  - id: "naifen-live-highlights"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://space.bilibili.com/402158519/lists/6004815?type=season"
+    creator_name: "奶粉"
+    creator_aliases: ["奶粉"]
+    enabled: true
+    tags: ["炉石传说", "直播精选"]
+
+  - id: "chuchu-live-highlights"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://space.bilibili.com/402158519/lists/6704345?type=season"
+    creator_name: "雏雏"
+    creator_aliases: ["雏雏"]
+    enabled: true
+    tags: ["炉石传说", "直播精选"]
+
+  - id: "xhope-live-highlights"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://space.bilibili.com/402158519/lists/7697742?type=season"
+    creator_name: "XHope"
+    creator_aliases: ["XHope", "xhope"]
+    enabled: true
+    tags: ["炉石传说", "直播精选"]
+
+  - id: "jiuqianyu-live-highlights"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://space.bilibili.com/402158519/lists/6375908?type=season"
+    creator_name: "九千羽"
+    creator_aliases: ["九千羽"]
+    enabled: true
+    tags: ["炉石传说", "直播精选"]
+
+  - id: "xiancai-live-highlights"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://space.bilibili.com/402158519/lists/6113866?type=season"
+    creator_name: "贤菜"
+    creator_aliases: ["贤菜"]
+    enabled: true
+    tags: ["炉石传说", "直播精选"]
