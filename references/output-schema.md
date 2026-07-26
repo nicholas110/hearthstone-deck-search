@@ -16,7 +16,8 @@ The Bilibili search script returns one JSON object.
 - `uploader`: Bilibili uploader account.
 - `collection_id` and `collection_name`: resolved UGC season.
 - `bvid`, `video_url`, `title`, and `published_at`: video evidence.
-- `deck_name_hint`: nearest description heading or label before the code.
+- `deck_name_hint`: nearest description heading or label before the code. When present, this is the authoritative display name and must be preserved exactly.
+- `deck_name_source`: `description` when the name was extracted from the public video description; otherwise `null`.
 - `deck_code`: complete extracted deck code.
 - `deck_code_valid`: structural Base64 validation.
 - `description_excerpt`: short local evidence around the code.
@@ -36,6 +37,8 @@ AAECAa0GBsugBKiWB/ypB4CqB4SqB4O/BwzwnwSg+wbD/waFhgedrQeFvwebvweixAeyxQevyQew3weW
 ````
 
 This is a Markdown fenced code block. Compatible UIs show a copy button in its upper-right corner. A name table must not replace these blocks.
+
+For Bilibili results, copy the `deck_name_hint` into the `###` line without translating, shortening, normalizing, or replacing it. If no hint exists, use `未命名卡组`; never infer a name from the title or model knowledge.
 
 ## Ranking routes
 

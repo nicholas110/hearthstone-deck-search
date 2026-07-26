@@ -229,6 +229,7 @@ def extract_decks(description: str) -> list[dict[str, Any]]:
             results.append(
                 {
                     "deck_name_hint": hint,
+                    "deck_name_source": "description" if hint else None,
                     "deck_code": code,
                     "deck_code_valid": validate_deck_code(code),
                     "description_excerpt": excerpt[:500],

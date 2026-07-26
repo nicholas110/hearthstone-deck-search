@@ -60,7 +60,7 @@ The script:
 3. Expands every section and page of the configured collection.
 4. Filters archive dates before requesting individual video descriptions.
 5. Retries transient network, timeout, rate-limit, and server errors.
-6. Extracts plausible Hearthstone deck codes and nearby deck names.
+6. Extracts plausible Hearthstone deck codes and their nearest description headings.
 7. Writes JSON to stdout only. It never creates a cache.
 
 If a source configured as `video_collection` resolves to a standalone video, report the configuration error. Do not silently treat it as a single-video source.
@@ -93,7 +93,9 @@ Always surface every `warnings` entry. If a ranking source reports stale records
 ## Interpret results
 
 - Treat `deck_code_valid` as structural validation, not proof that the deck is legal in the current patch.
-- Use `deck_name_hint` as evidence from the description. Improve awkward names from the title and description, but do not invent an archetype.
+- Treat a non-empty `deck_name_hint` as the authoritative name copied from the video description. Preserve it exactly; do not translate, shorten, normalize, embellish, or replace it with an archetype inferred from the title or card knowledge.
+- If `deck_name_hint` is empty, use `未命名卡组`. Do not invent a name from the video title, gameplay, class, cards, or model knowledge.
+- For user-facing Bilibili deck results, prefer `scripts/search_bilibili.py ... --format markdown` and reproduce its fenced deck blocks verbatim. Never manually rewrite the `###` name line.
 - State the video date, streamer, uploader, collection, and video URL.
 - Keep multiple codes from one video as separate results.
 - When no code is present, do not reconstruct a deck from gameplay or title alone.

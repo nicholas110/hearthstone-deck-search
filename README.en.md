@@ -11,7 +11,7 @@ It runs entirely on the user's machine. No hosted workflow, background service, 
 - Search maintained Bilibili collections by creator alias or deck keyword.
 - Distinguish standalone video URLs from videos that belong to a Bilibili UGC collection.
 - Expand collection pages and inspect recent video titles and descriptions in real time.
-- Extract and structurally validate complete Hearthstone deck codes.
+- Extract and structurally validate complete Hearthstone deck codes while preserving names already present in video descriptions.
 - Return one copyable Markdown code block per deck.
 - Search Standard and Wild archetype rankings with representative deck builds.
 - Search official Chinese Hearthstone player rankings.

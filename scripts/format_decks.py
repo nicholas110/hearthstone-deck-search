@@ -9,18 +9,10 @@ from pathlib import Path
 from typing import Any
 
 
-def clean_name(value: Any, title: Any = None) -> str:
+def clean_name(value: Any) -> str:
     name = re.sub(r"^[#>*\-\s]+", "", str(value or "")).strip()
-    ascii_prefix = re.match(r"^[A-Za-z0-9_.-]{2,20}\s+(.+)$", name)
-    if ascii_prefix:
-        name = ascii_prefix.group(1).strip()
-    if not name:
-        candidate = re.sub(r"^【[^】]+】", "", str(title or "")).strip()
-        candidate = re.sub(r"^[^：:]{1,12}[：:]", "", candidate).strip()
-        match = re.search(r"一套([^！!？?，,。]{2,18})", candidate)
-        name = match.group(1).strip() if match else ""
     name = re.sub(r"[\r\n`]+", " ", name).strip()
-    return name[:40] if name else "未命名卡组"
+    return name if name else "未命名卡组"
 
 
 def collect_decks(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -60,7 +52,9 @@ def collect_decks(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 continue
             decks.append(
                 {
-                    "name": clean_name(item.get("deck_name_hint"), item.get("title")),
+                    # The description heading is source evidence. Preserve it verbatim
+                    # instead of asking the model or the video title to rename the deck.
+                    "name": clean_name(item.get("deck_name_hint")),
                     "code": code,
                     "summary": "，".join(
                         part
