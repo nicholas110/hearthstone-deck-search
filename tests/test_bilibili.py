@@ -176,6 +176,15 @@ class ClientTests(unittest.TestCase):
             with self.assertRaises(module.RequestBudgetExceeded):
                 client.get_json("/two", {})
 
+    def test_zero_request_budget_means_unlimited(self):
+        response = FakeResponse({"code": 0, "data": {}})
+        client = self.make_client(attempts=1, max_requests=0)
+        with mock.patch.object(module.urllib.request, "urlopen", return_value=response):
+            for _ in range(100):
+                client.get_json("/test", {})
+        self.assertEqual(client.request_count, 100)
+        self.assertIsNone(client.max_requests)
+
 
 class CliTests(unittest.TestCase):
     def test_negative_days_is_rejected(self):

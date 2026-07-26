@@ -97,14 +97,14 @@ The script:
 2. Dispatches `single_video` and `video_collection` sources explicitly.
 3. Prefers collection episodes embedded in a seed video's public metadata and uses collection pagination only as a fallback.
 4. Filters and orders archive dates before requesting individual video descriptions.
-5. Stops after reaching the requested result limit or the configured request budget.
+5. Stops after reaching the requested result limit or exhausting the matching candidates.
 6. Paces requests, retries transient failures, and stops immediately when Bilibili risk control is detected.
 7. Fully parses Deckstrings and extracts names from explicit description headings or labels.
 8. Writes to stdout only. It never creates a persistent cache.
 
 If a source configured as `video_collection` resolves to a standalone video, report the configuration error. Do not silently treat it as a single-video source.
 
-Treat request-budget exhaustion and Bilibili `-352` or HTTP `412` responses as partial source failures. Do not bypass risk control or ask the user for account cookies.
+The default Bilibili request budget is unlimited (`max_api_requests: 0`). Never describe it as an API account quota. If a maintainer sets a positive custom budget, treat its exhaustion as a partial source failure. Always stop on Bilibili `-352` or HTTP `412`; do not bypass risk control or ask the user for account cookies.
 
 ## Search IYingDi tournaments
 

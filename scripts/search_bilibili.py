@@ -108,8 +108,8 @@ def load_config(path: Path) -> dict[str, Any]:
 def validate_config(config: dict[str, Any]) -> None:
     if int(config.get("retry_max_attempts", 1)) < 1:
         raise ValueError("retry_max_attempts must be at least 1")
-    if int(config.get("max_api_requests", 1)) < 1:
-        raise ValueError("max_api_requests must be at least 1")
+    if int(config.get("max_api_requests", 0)) < 0:
+        raise ValueError("max_api_requests must be zero or greater")
     seen: set[str] = set()
     for source in config.get("sources") or []:
         missing = [
@@ -138,13 +138,13 @@ class BilibiliClient:
         timeout: int,
         attempts: int,
         backoff: list[int],
-        max_requests: int = 30,
+        max_requests: int = 0,
         request_delay: float = 0.25,
     ):
         self.timeout = timeout
         self.attempts = max(1, attempts)
         self.backoff = backoff or [1, 2, 4]
-        self.max_requests = max(1, max_requests)
+        self.max_requests = max_requests if max_requests > 0 else None
         self.request_delay = max(0.0, request_delay)
         self.request_count = 0
         self.last_request_at: float | None = None
@@ -154,7 +154,7 @@ class BilibiliClient:
     def _pace(self) -> None:
         if self.risk_controlled:
             raise RequestBudgetExceeded("Bilibili risk control was triggered; stopped further requests")
-        if self.request_count >= self.max_requests:
+        if self.max_requests is not None and self.request_count >= self.max_requests:
             raise RequestBudgetExceeded(f"Bilibili request budget exhausted ({self.max_requests})")
         if self.last_request_at is not None and self.request_delay:
             elapsed = time.monotonic() - self.last_request_at
@@ -580,7 +580,7 @@ def main() -> int:
         timeout=int(config.get("request_timeout_seconds", 15)),
         attempts=int(config.get("retry_max_attempts", 4)),
         backoff=[int(value) for value in config.get("retry_backoff_seconds", [1, 2, 4])],
-        max_requests=int(config.get("max_api_requests", 30)),
+        max_requests=int(config.get("max_api_requests", 0)),
         request_delay=float(config.get("request_delay_seconds", 0.25)),
     )
     output: dict[str, Any] = {

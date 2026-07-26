@@ -8,7 +8,7 @@ Each search script returns one JSON object with a route-specific result schema.
 - `sources`: resolved collection metadata and scan counts.
 - `results`: one row per extracted deck code.
 - `warnings`: partial failures and configuration problems.
-- `request_metrics`: request budget, API request count, candidate count, scan count, and risk-control state.
+- `request_metrics`: API request count, optional request budget, candidate count, scan count, and risk-control state. Bilibili reports `request_budget: null` when its default unlimited mode is active; this is not an account quota.
 
 ## Result fields
 

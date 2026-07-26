@@ -20,7 +20,7 @@ It runs entirely on the user's machine. No hosted workflow, background service, 
 - Search official Chinese Hearthstone player rankings.
 - Search Arena class and card rankings.
 - Search Battlegrounds composition tiers and optional strategy details.
-- Use a finite request budget, paced sequential scans, and early stopping to reduce Bilibili risk-control triggers.
+- Apply no hard Bilibili request-count cap; use paced sequential scans and result-based early stopping to reduce risk-control triggers.
 - Retry transient failures and stop further requests immediately when Bilibili risk control is detected.
 - Continue through NetEase Dashen, Bilibili, IYingDi, and constructed rankings when a general deck search returns no result or a source fails.
 - Query every selected source for explicit cross-source research while preserving source semantics and warnings.
@@ -230,7 +230,7 @@ Use this structure for one video:
   tags: ["Hearthstone"]
 ```
 
-`--days` rejects negative values, `--limit` must be positive, each run is capped by `max_api_requests`, and scanning stops when enough results have been found.
+`--days` rejects negative values and `--limit` must be positive. The default `max_api_requests: 0` means no Bilibili request-count cap; scanning still stops when enough results have been found or risk control is triggered.
 
 ## Sources and methodology
 

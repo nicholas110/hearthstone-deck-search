@@ -5,7 +5,7 @@
 - Purpose: discover decks shown by creators in maintained public video sources.
 - Access: user-triggered reads of public video and UGC-season metadata.
 - Storage: no persistent result cache, video download, account cookie, or credential storage.
-- Request controls: finite per-run request budget, paced sequential detail requests, transient retry, and immediate stop on risk-control responses.
+- Request controls: no request-count cap by default, paced sequential detail requests, transient retry, result-based early stopping, and immediate stop on risk-control responses.
 - Meaning: a result shows that a creator's maintained source published or showcased the deck. Views are not game samples.
 
 Each source in `sources.yaml` must declare `kind` as either:
