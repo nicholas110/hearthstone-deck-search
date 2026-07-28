@@ -74,6 +74,16 @@ SERVER_RANK_PREFIX_RE = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
+CONTRIBUTOR_PREFIX_RE = re.compile(
+    r"^.{1,24}?[：:\s]+(?P<deck_name>(?:标准|狂野).+)$",
+    re.IGNORECASE,
+)
+MODE_SERVER_RANK_RE = re.compile(
+    r"^(?P<mode>标准|狂野)\s*(?:国服|美服|欧服|亚服)\s*"
+    r"(?:(?:传说)?登顶|传说(?:前)?\s*\d+|前\s*\d+|高分段)\s*"
+    r"(?P<deck_name>.+)$",
+    re.IGNORECASE,
+)
 TITLE_DECK_NAME_RE = re.compile(
     r"""
     (?P<deck_name>
@@ -477,6 +487,14 @@ def normalize_name_hint(value: str) -> tuple[str, bool]:
     if bracketed:
         name = bracketed
 
+    contributor_match = CONTRIBUTOR_PREFIX_RE.match(name)
+    if contributor_match:
+        name = contributor_match.group("deck_name").strip()
+
+    mode_rank_match = MODE_SERVER_RANK_RE.match(name)
+    if mode_rank_match:
+        name = f"{mode_rank_match.group('mode')}{mode_rank_match.group('deck_name').strip()}"
+
     server_match = SERVER_RANK_PREFIX_RE.match(name)
     if server_match:
         candidate = server_match.group("deck_name").strip(" \t,，;；|｜/／—–-")
@@ -484,6 +502,7 @@ def normalize_name_hint(value: str) -> tuple[str, bool]:
             name = candidate
 
     name = re.sub(r"\s{2,}", " ", name).strip()
+    name = name.rstrip(" \t:：,，;；。")
     return name, name != original
 
 

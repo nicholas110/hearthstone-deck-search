@@ -108,3 +108,13 @@ sources:
     creator_aliases: ["贤菜"]
     enabled: true
     tags: ["炉石传说", "直播精选"]
+
+  - id: "dongshao-deck-encyclopedia"
+    platform: "bilibili"
+    kind: "video_collection"
+    entry_url: "https://space.bilibili.com/204408558/lists/13148?type=season"
+    seed_bvid: "BV1cM3P6CEoL"
+    creator_name: "炉石东少"
+    creator_aliases: ["东少", "炉石东少"]
+    enabled: true
+    tags: ["炉石传说", "卡组百科", "多卡组推荐"]

@@ -139,6 +139,34 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(len(decks), 2)
         self.assertTrue(all(deck["deck_name_hint"] is None for deck in decks))
 
+    def test_multiple_description_names_are_kept_per_deck(self):
+        second_code = (
+            "AAECAR8Gqp8EpfwGmacHmqcHm6cHrtgHDKmfBNOeBq+SB86bB4PAB7TAB7vAB97E"
+            "B6zYB9faB9PbB9fbBwABA4OEB67YB6aSB67YB7qVB67YBwAA"
+        )
+        decks = module.extract_decks(
+            f"标准随从萨：\n{STANDARD_CODE}\n\n狂野机械骑：\n{second_code}",
+            "一期推荐多个卡组",
+            "炉石东少",
+        )
+        self.assertEqual([deck["deck_name_hint"] for deck in decks], ["标准随从萨", "狂野机械骑"])
+        self.assertTrue(all(deck["deck_name_source"] == "description_line_normalized" for deck in decks))
+        self.assertTrue(all(deck["deck_code_valid"] for deck in decks))
+
+    def test_contributor_prefix_is_removed_from_collection_deck_name(self):
+        cases = {
+            "我不是非酋 标准快攻虚空瞎：": "标准快攻虚空瞎",
+            "小蜗：标准麦琳龙德：": "标准麦琳龙德",
+            "Brox 标准大恶魔术：": "标准大恶魔术",
+            "薇尔莉特丶 狂野脏牧：": "狂野脏牧",
+            "包包 标准国服登顶虚空瞎（适合内战）：": "标准虚空瞎（适合内战）",
+        }
+        for source_name, expected in cases.items():
+            with self.subTest(source_name=source_name):
+                deck = module.extract_decks(f"{source_name}\n{STANDARD_CODE}")[0]
+                self.assertEqual(deck["deck_name_hint"], expected)
+                self.assertEqual(deck["deck_name_source"], "description_line_normalized")
+
     def test_title_does_not_treat_narrative_words_as_deck_names(self):
         self.assertIsNone(module.infer_name_from_title("这个玩法太离谱了！吊打贼萨！"))
 

@@ -242,6 +242,8 @@ Use this structure for one video:
 
 `--days` rejects negative values and `--limit` must be positive. The default `max_api_requests: 0` means no Bilibili request-count cap; scanning still stops when enough results have been found or risk control is triggered.
 
+When one description contains multiple decks, the script pairs each adjacent name and code and returns separate copyable results. It never assigns one video-title inference to every code. The maintained registry includes Hearthstone Dongshao's “Deck Encyclopedia” collection; query it with `--creator "东少"` or `--source "dongshao-deck-encyclopedia"`.
+
 ## Sources and methodology
 
 - NetEase Dashen: real-time read of the public deck-square JSON used by its Hearthstone tool; the login-bound personal-deck route is not accessed.

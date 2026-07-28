@@ -242,6 +242,8 @@ python scripts/search_rankings.py battlegrounds --tier 1 --details --limit 5
 
 `--days` 不接受负数，`--limit` 必须大于零。默认 `max_api_requests: 0`，表示 B站查询没有请求次数硬上限；达到结果数量后仍会提前停止，触发 B站风控时也会立即停止。
 
+一个视频简介含多套卡组时，脚本会按“名称 + 紧邻代码”逐套拆分，分别输出可复制代码；不会把同一视频标题套用到全部卡组。维护源中已包含炉石东少的「卡组百科」合集，可用 `--creator "东少"` 或 `--source "dongshao-deck-encyclopedia"` 查询。
+
 ## 数据源与统计方法
 
 - 网易大神：实时读取其炉石卡组工具使用的公开套牌广场 JSON；不访问需要登录的“我的卡组”。
